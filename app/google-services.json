@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "305376730480",
+    "firebase_url": "https://appubicacion-419723-default-rtdb.firebaseio.com",
+    "project_id": "appubicacion-419723",
+    "storage_bucket": "appubicacion-419723.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:305376730480:android:3f7a4752717846a21f83b5",
+        "android_client_info": {
+          "package_name": "com.esime.ubicacionmaestra"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC0Hqd9fak8i14H9vIDXQB4EV9SBn_63js"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
