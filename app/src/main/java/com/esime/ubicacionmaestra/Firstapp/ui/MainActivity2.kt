@@ -23,7 +23,7 @@ class MainActivity2 : AppCompatActivity() {
     val user = hashMapOf(
         "Latitud" to "-",
         "Logitud" to "-",
-        "email" to "@",
+        "Numero" to "@",
         "pass" to "-",
         "Nombre" to "-"
     )
