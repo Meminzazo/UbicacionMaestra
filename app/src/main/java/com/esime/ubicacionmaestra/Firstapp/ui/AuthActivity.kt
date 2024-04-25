@@ -18,6 +18,11 @@ class AuthActivity : AppCompatActivity() {
             insets
         }
         supportActionBar?.hide()
-        //
+        setup()
+    }
+    private fun setup(){
+
+        title = "Autenticación"
+
     }
 }
