@@ -154,7 +154,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMyLoca
             "Estas en ${p0.latitude}, ${p0.longitude}",
             Toast.LENGTH_SHORT
         ).show()
-        actualizarColletion(lat, lon)
+        //actualizarColletion(lat, lon)
     }
 
     fun actualizarColletion(lat: Double, lon: Double) {
