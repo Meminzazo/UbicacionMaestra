@@ -2,6 +2,7 @@ package com.esime.ubicacionmaestra.Firstapp.ui
 
 import android.os.Bundle
 import android.util.Log
+import android.widget.Switch
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -38,23 +39,29 @@ class MainActivity2 : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
-        /*crearDocument.setOnClickListener {
+        val switchUbicacionReal = findViewById<Switch>(R.id.UbicacionReal) as Switch
+        val switchConsultar = findViewById<Switch>(R.id.ConsultarUbicacion) as Switch
 
-        }*/
-    }
-    fun crearcolletion(){
+        switchUbicacionReal.setOnClickListener {
+            if (switchUbicacionReal.isChecked){
 
-        // Add a new document with a generated ID
-
-        db.collection("users")
-            .add(user)
-            .addOnSuccessListener { documentReference ->
-                Log.d(TAG, "DocumentSnapshot added with ID: ${documentReference.id}")
             }
-            .addOnFailureListener { e ->
-                Log.w(TAG, "Error adding document", e)
+            else{
+
             }
+        }
+
+        switchConsultar.setOnClickListener {
+            if(switchConsultar.isChecked){
+
+            }
+            else{
+
+            }
+
+        }
     }
+
 }
 
 
