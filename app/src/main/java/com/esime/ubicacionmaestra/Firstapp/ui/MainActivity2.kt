@@ -7,14 +7,17 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.lifecycleScope
 import com.esime.ubicacionmaestra.R
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.launch
 
 
 class MainActivity2 : AppCompatActivity() {
 
     private lateinit var database: DatabaseReference
+    private val locationService:LocationService = LocationService()
 
     companion object {
         const val TAG = "MainActivity" // Definimos la variable TAG aqui
@@ -42,13 +45,27 @@ class MainActivity2 : AppCompatActivity() {
         val switchUbicacionReal = findViewById<Switch>(R.id.UbicacionReal) as Switch
         val switchConsultar = findViewById<Switch>(R.id.ConsultarUbicacion) as Switch
 
-        switchUbicacionReal.setOnClickListener {
-            if (switchUbicacionReal.isChecked){
 
+
+        switchUbicacionReal.setOnClickListener {
+            if (switchUbicacionReal.isActivated) {
+                lifecycleScope.launch {
+                    val result = locationService.getUserLocation(this@MainActivity2)
+
+                        while (true) {
+
+                            db.collection("users").document("hmaury10@gmail.com").update(
+                                mapOf(
+                                    "Latitud" to "${result?.latitude}",
+                                    "Longitud" to "${result?.longitude}"
+                                )
+                            )
+                        }
+                }
             }
             else{
 
-            }
+                }
         }
 
         switchConsultar.setOnClickListener {
