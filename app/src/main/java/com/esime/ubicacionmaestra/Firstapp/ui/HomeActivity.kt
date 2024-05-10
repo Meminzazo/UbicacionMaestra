@@ -68,7 +68,9 @@ class HomeActivity : AppCompatActivity() {
         crearcolletion(email)
         // lanza la aplicacion
         goButton.setOnClickListener{
-            val intent = Intent(this, MainActivity::class.java)
+            val intent = Intent(this, MenuPrincipalActivity::class.java).apply {
+                putExtra("Email", email)
+            }
             startActivity(intent)
         }
 

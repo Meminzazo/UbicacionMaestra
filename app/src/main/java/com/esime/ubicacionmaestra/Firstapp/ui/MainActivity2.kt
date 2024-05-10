@@ -21,6 +21,8 @@ class MainActivity2 : AppCompatActivity() {
 
     companion object {
         const val TAG = "MainActivity" // Definimos la variable TAG aqui
+        const val PREFS_NAME = "SwitchPrefs"
+        const val SWITCH_STATE = "switch_state"
     }
 
     val db = FirebaseFirestore.getInstance()

@@ -16,6 +16,18 @@
         android:theme="@style/Theme.UbicacionMaestra"
         tools:targetApi="31">
         <activity
+            android:name=".Firstapp.ui.ConsultAppR"
+            android:exported="false" />
+        <activity
+            android:name=".Firstapp.ui.SaveUbicacionReal"
+            android:exported="false" />
+        <activity
+            android:name=".Firstapp.ui.ConsultarUbicacionReal"
+            android:exported="false" />
+        <activity
+            android:name=".Firstapp.ui.MenuPrincipalActivity"
+            android:exported="false" />
+        <activity
             android:name=".Firstapp.ui.HomeActivity"
             android:exported="false" />
         <activity
@@ -39,7 +51,7 @@
 
         <activity
             android:name=".Firstapp.ui.MainActivity"
-            android:exported="true"></activity>
+            android:exported="true" />
     </application>
 
 </manifest>
