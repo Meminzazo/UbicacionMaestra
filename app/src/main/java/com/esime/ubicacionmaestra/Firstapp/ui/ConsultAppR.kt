@@ -10,6 +10,7 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
 import android.util.Log
+import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -18,9 +19,14 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.esime.ubicacionmaestra.R
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.BitmapDescriptor
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.firestore.FirebaseFirestore
@@ -29,12 +35,8 @@ import kotlinx.coroutines.launch
 
 class ConsultAppR : AppCompatActivity() , OnMapReadyCallback, GoogleMap.OnMyLocationButtonClickListener, GoogleMap.OnMyLocationClickListener{
 private lateinit var map: GoogleMap
-private lateinit var database: DatabaseReference
-private val locationService: LocationService = LocationService()
+private val locationService:LocationService = LocationService()
 val db = FirebaseFirestore.getInstance()
-val emailUbicacion = findViewById<EditText>(R.id.emailUbicacion)
-val ConsultarUbicacionReal = findViewById<AppCompatButton>(R.id.ConsultarUbicacionEmail)
-var emailConsultar = ""
 
 
 companion object {
@@ -47,81 +49,99 @@ companion object {
 
 
 
+ @SuppressLint("MissingInflatedId", "WrongViewCast")
  override fun onCreate(savedInstanceState: Bundle?) {
      super.onCreate(savedInstanceState)
-     enableEdgeToEdge()
      setContentView(R.layout.activity_consult_app_r)
+     enableEdgeToEdge()
+     supportActionBar?.hide()
      ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
          val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
          v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
          insets
      }
-
+     val emailUbicacion = findViewById<EditText>(R.id.emailUbicacion)
+     val consultButton = findViewById<AppCompatButton>(R.id.consultButton)
+     var saveUbi = findViewById<Button>(R.id.saveUbi)
+     val switchConsultar =
+         findViewById<SwitchMaterial>(R.id.ConsultarUbicacion) as SwitchMaterial
+     val sharedPrefs = getSharedPreferences(MainActivity2.PREFS_NAME, Context.MODE_PRIVATE)
+     switchConsultar.isChecked = sharedPrefs.getBoolean(MainActivity2.SWITCH_STATE, false)
+        var emailCon = ""
+     val ConsultarUbicacionEmail = findViewById<AppCompatButton>(R.id.ConsultarUbicacionEmail)
      createFragment()
 
-    val switchConsultar =
-        findViewById<SwitchMaterial>(R.id.ConsultarUbicacion) as SwitchMaterial
-    val sharedPrefs = getSharedPreferences(MainActivity2.PREFS_NAME, Context.MODE_PRIVATE)
-    switchConsultar.isChecked = sharedPrefs.getBoolean(MainActivity2.SWITCH_STATE, false)
+    var flag = false
 
 
 
+     ConsultarUbicacionEmail.setOnClickListener {
+         if (emailUbicacion.text.isNotEmpty()){
+             emailCon = emailUbicacion.text.toString()
+             Log.d(TAG, "email a consultar es: ${emailCon}")
+         }else{
+             Toast.makeText(
+                 this,
+                 "Ingresa una direccion de correo valida",
+                 Toast.LENGTH_LONG
+             ).show()
+         }
+     }
+
+     switchConsultar.setOnCheckedChangeListener { _, isChecked ->
+         if (isChecked) {
+             flag = isChecked
+             lifecycleScope.launch {
+                 val docRef = db.collection("users").document("$emailCon")
+                 while (flag) {
+                     docRef.get().addOnSuccessListener { document ->
+                         if (document != null){
+
+                             var Latitud = document.getString("Latitud")
+                             var Lognitud = document.getString("Longitud")
+
+                             var LatitudDouble = Latitud!!.toDouble()
+                             var LontiudDouble = Lognitud!!.toDouble()
+
+                             if (Latitud != null && Lognitud != null){
+
+                                 val coordinates = LatLng(LatitudDouble, LontiudDouble)
+                                 val marker = MarkerOptions().position(coordinates).title("Aprox")
+                                 map.addMarker(marker)
+                                 MarkerOptions().icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+                                 map.animateCamera(
+                                     CameraUpdateFactory.newLatLngZoom(coordinates,13f),
+                                     5000,
+                                     null
+                                 )
+                                 Log.d(TAG, "Latitud: ${Latitud}")
+                                 Log.d(TAG, "Longitud: ${Lognitud}")
+                             }else{
+                                 Log.d(TAG, "No hay Latitud ni Longitud")
+                             }
+                         }else{
+                             Log.d(TAG, "No such document")
+                         }
+                     }
+                         .addOnFailureListener { excepcion ->
+                             Log.d(TAG, "get failed with ", excepcion)
+                         }
+
+                     delay(5000)
+                 }
+             }
+
+         } else {
+             flag = false
+         }
+         with(sharedPrefs.edit()) {
+             putBoolean(MainActivity2.SWITCH_STATE, isChecked)
+             apply()
+         }
+     }
 
  }
 
-
-  /*   ConsultarUbicacionReal.setOnClickListener{
-                if (emailUbicacion.text.isNotEmpty())
-                {
-                     emailConsultar = emailUbicacion.toString()
-                }
-                else
-                {
-
-                }
-            }
-
-          switchConsultar.setOnCheckedChangeListener { _, isChecked ->
-                if (isChecked) {
-                    getuserlocation(isChecked,emailConsultar)
-                } else {
-
-                }
-                with(sharedPrefs.edit()) {
-                    putBoolean(MainActivity2.SWITCH_STATE, isChecked)
-                    apply()
-                }
-            } */
-
-
-       private fun getuserlocation(isChecked: Boolean, emailConsultar: String) {
-            lifecycleScope.launch {
-                val docRef = db.collection("users").document("hmaury10@gmail.com")
-                while (isChecked) {
-                    docRef.get().addOnSuccessListener { document ->
-                        if (document != null){
-
-                            var Latitud = document.getString("Latitud")
-                            var Lognitud = document.getString("Longitud")
-
-                            if (Latitud != null && Lognitud != null){
-                                Log.d(TAG, "Latitud: ${Latitud}")
-                                Log.d(TAG, "Longitud: ${Lognitud}")
-                            }else{
-                                Log.d(TAG, "No hay Latitud ni Longitud")
-                            }
-                        }else{
-                            Log.d(TAG, "No such document")
-                        }
-                    }
-                        .addOnFailureListener { excepcion ->
-                            Log.d(TAG, "get failed with ", excepcion)
-                        }
-
-                    delay(5000)
-                }
-            }
-        }
 
         private fun createFragment(){
             val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment

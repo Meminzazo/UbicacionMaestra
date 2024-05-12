@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -35,13 +36,6 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
     }
 
     val db = FirebaseFirestore.getInstance()
-    val user = hashMapOf(
-        "Latitud" to "-",
-        "Logitud" to "-",
-        "Numero" to "@",
-        "pass" to "-",
-        "Nombre" to "-"
-    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,15 +52,31 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         val sharedPrefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         switchUbicacionReal.isChecked = sharedPrefs.getBoolean(SWITCH_STATE, false)
 
-        val isChecked = switchUbicacionReal.isChecked
+        val isCheck = switchUbicacionReal.isChecked
+
+        var flag = false
 
         switchUbicacionReal.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
+                flag = isChecked
 
-                userlocation(isChecked,email)
+                Log.d(TAG, "la Flag: $flag")
+
+                lifecycleScope.launch {
+                    while(flag){
+                        val result = locationService.getUserLocation(this@SaveUbicacionReal)
+                        db.collection("users").document("hmaury10@gmail.com").update(
+                            mapOf(
+                                "Latitud" to "${result?.latitude}",
+                                "Longitud" to "${result?.longitude}"
+                            )
+                        )
+                        delay(5000)
+                    }
+                }
             }
             else{
-
+                    flag = false
             }
             with(sharedPrefs.edit()){
                 putBoolean(SWITCH_STATE, isChecked)
@@ -77,20 +87,6 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
 
     }
 
-    private fun userlocation(isChecked: Boolean, email: String?) {
-        lifecycleScope.launch {
-            while(isChecked){
-                val result = locationService.getUserLocation(this@SaveUbicacionReal)
-                db.collection("users").document("hmaury10@gmail.com").update(
-                    mapOf(
-                        "Latitud" to "${result?.latitude}",
-                        "Longitud" to "${result?.longitude}"
-                    )
-                )
-                delay(5000)
-            }
-        }
-    }
     private fun createFragment(){
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
@@ -172,8 +168,6 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         ).show()
         return false
     }
-
-
 
     override fun onMyLocationClick(p0: Location) {
         val lat = p0.latitude

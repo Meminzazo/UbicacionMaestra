@@ -8,6 +8,11 @@ android {
     namespace = "com.esime.ubicacionmaestra"
     compileSdk = 34
 
+    packagingOptions {
+        exclude ("androidsupportmultidexversion.txt")
+    }
+
+
     defaultConfig {
         applicationId = "com.esime.ubicacionmaestra"
         minSdk = 19
