@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
 import android.util.Log
+import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -42,8 +43,10 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         setContentView(R.layout.activity_save_ubicacion_real)
 
         supportActionBar?.hide()
+        //val emailEditText = findViewById<EditText>(R.id.emailEditText)
         val bundle = intent.extras
         val email = bundle?.getString("Email")
+        //val user = emailEditText.text.toString()
         createFragment()
 
         val switchUbicacionReal = findViewById<SwitchMaterial>(R.id.UbicacionReal) as SwitchMaterial
@@ -65,7 +68,7 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
                 lifecycleScope.launch {
                     while(flag){
                         val result = locationService.getUserLocation(this@SaveUbicacionReal)
-                        db.collection("users").document("hmaury10@gmail.com").update(
+                        db.collection("users").document("crafter@gmail.com").update(   //aqui cambiar a el correo en uso
                             mapOf(
                                 "Latitud" to "${result?.latitude}",
                                 "Longitud" to "${result?.longitude}"
