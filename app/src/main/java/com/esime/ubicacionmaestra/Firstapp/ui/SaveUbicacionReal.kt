@@ -43,10 +43,10 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         setContentView(R.layout.activity_save_ubicacion_real)
 
         supportActionBar?.hide()
-        //val emailEditText = findViewById<EditText>(R.id.emailEditText)
+      /*  //val emailEditText = findViewById<EditText>(R.id.emailEditText)
         val bundle = intent.extras
         val email = bundle?.getString("Email")
-        //val user = emailEditText.text.toString()
+        //val user = emailEditText.text.toString() */
         createFragment()
 
         val switchUbicacionReal = findViewById<SwitchMaterial>(R.id.UbicacionReal) as SwitchMaterial

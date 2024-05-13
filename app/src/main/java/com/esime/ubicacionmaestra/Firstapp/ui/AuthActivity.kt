@@ -38,6 +38,7 @@ class AuthActivity : AppCompatActivity() {
         val passEditText = findViewById<EditText>(R.id.passEditText)
         val loginButton = findViewById<Button>(R.id.loginButton)
 
+
         registrarButtom.setOnClickListener()
         {
             if(emailEditText.text.isNotEmpty() && passEditText.text.isNotEmpty())           //comprueba si los campos son vacios
@@ -78,6 +79,8 @@ class AuthActivity : AppCompatActivity() {
         }
 
 
+
+
     }
 
     private fun showAlert()
@@ -98,5 +101,8 @@ class AuthActivity : AppCompatActivity() {
         }
         startActivity(homeIntent)
     }
+
+
+
 
 }
