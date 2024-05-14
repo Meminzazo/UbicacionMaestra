@@ -39,7 +39,6 @@ class MenuPrincipalActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
-
     }
 
 
