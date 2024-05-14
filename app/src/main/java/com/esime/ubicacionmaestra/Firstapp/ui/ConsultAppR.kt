@@ -108,12 +108,13 @@ companion object {
                                  val coordinates = LatLng(LatitudDouble, LontiudDouble)
                                  val marker = MarkerOptions().position(coordinates).title("Aprox")
                                  map.addMarker(marker)
-                                 MarkerOptions().icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+                                 MarkerOptions().icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)).position(coordinates).flat(true)
                                  map.animateCamera(
-                                     CameraUpdateFactory.newLatLngZoom(coordinates,13f),
+                                     CameraUpdateFactory.newLatLngZoom(coordinates,15f),
                                      5000,
                                      null
                                  )
+
                                  Log.d(TAG, "Latitud: ${Latitud}")
                                  Log.d(TAG, "Longitud: ${Lognitud}")
                              }else{

@@ -2,6 +2,7 @@ package com.esime.ubicacionmaestra.Firstapp.ui
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -20,6 +21,8 @@ class MenuPrincipalActivity : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
+        val bundle = intent.extras
+        val email = bundle?.getString("Email1")
 
         // consultar opciones de ubicacion
        val consultButton = findViewById<Button>(R.id.consultButton)
@@ -29,7 +32,10 @@ class MenuPrincipalActivity : AppCompatActivity() {
         }
        val saveUbi = findViewById<Button>(R.id.saveUbi)
         saveUbi.setOnClickListener{
-            val intent = Intent (this, SaveUbicacionReal::class.java)
+            val intent = Intent (this, SaveUbicacionReal::class.java).apply{
+                putExtra("Email", email)
+            }
+            Log.d("MenuPrincipalActivity", "Email: $email")
             startActivity(intent)
         }
 

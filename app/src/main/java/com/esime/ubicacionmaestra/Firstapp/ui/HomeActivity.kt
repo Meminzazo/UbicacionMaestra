@@ -69,7 +69,8 @@ class HomeActivity : AppCompatActivity() {
         // lanza la aplicacion
         goButton.setOnClickListener{
             val intent = Intent(this, MenuPrincipalActivity::class.java).apply {
-                putExtra("Email", email)
+                putExtra("Email1", email)
+                Log.d("HomeActivity", "Email: $email")
             }
             startActivity(intent)
         }

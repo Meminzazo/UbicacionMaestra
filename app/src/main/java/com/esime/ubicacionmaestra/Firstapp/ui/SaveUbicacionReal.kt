@@ -64,8 +64,9 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
 
                 lifecycleScope.launch {
                     while(flag){
+                        Log.d(TAG, "Entrando al while $email")
                         val result = locationService.getUserLocation(this@SaveUbicacionReal)
-                        db.collection("users").document("hmaury10@gmail.com").update(
+                        db.collection("users").document("$email").update(
                             mapOf(
                                 "Latitud" to "${result?.latitude}",
                                 "Longitud" to "${result?.longitude}"
