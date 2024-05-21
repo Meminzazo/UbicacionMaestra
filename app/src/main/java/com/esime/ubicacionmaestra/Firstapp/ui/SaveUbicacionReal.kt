@@ -3,6 +3,7 @@ package com.esime.ubicacionmaestra.Firstapp.ui
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
@@ -11,7 +12,6 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.lifecycleScope
 import com.esime.ubicacionmaestra.R
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -19,8 +19,6 @@ import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 
 class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMyLocationButtonClickListener, GoogleMap.OnMyLocationClickListener  {
@@ -30,7 +28,7 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
     private val locationService:LocationService = LocationService()
 
     companion object {
-        const val TAG = "MainActivity" // Definimos la variable TAG aqui
+        const val TAG = "SaveUbicacionReal" // Definimos la variable TAG aqui
         const val PREFS_NAME = "SwitchPrefs"
         const val SWITCH_STATE = "switch_state"
     }
@@ -56,28 +54,37 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
 
         var flag = false
 
-        switchUbicacionReal.setOnCheckedChangeListener { _, isChecked ->
+        switchUbicacionReal.setOnCheckedChangeListener {  _, isChecked ->
             if (isChecked) {
                 flag = isChecked
 
-                Log.d(TAG, "la Flag: $flag")
-
-                lifecycleScope.launch {
-                    while(flag){
-                        Log.d(TAG, "Entrando al while $email")
-                        val result = locationService.getUserLocation(this@SaveUbicacionReal)
-                        db.collection("users").document("$email").update(
-                            mapOf(
-                                "Latitud" to "${result?.latitude}",
-                                "Longitud" to "${result?.longitude}"
-                            )
-                        )
-                        delay(5000)
-                    }
+                val intent = Intent(this, UbicacionGuardarService::class.java).apply {
+                    putExtra("Flag", flag)
+                    putExtra("Email", email)
                 }
+                Log.d(TAG, "$flag")
+                Log.d(TAG,"$email")
+                startService(intent)
+
+//                lifecycleScope.launch {
+//                    while(flag){
+//                        Log.d(TAG, "Entrando al while $email")
+//                        val result = locationService.getUserLocation(this@SaveUbicacionReal)
+//                        db.collection("users").document("$email").update(
+//                            mapOf(
+//                                "Latitud" to "${result?.latitude}",
+//                                "Longitud" to "${result?.longitude}"
+//                            )
+//                        )
+//                        delay(5000)
+//
+//                    }
+//                }
             }
             else{
-                    flag = false
+                val intent2 = Intent(this, MainActivity::class.java)
+                flag = false
+                stopService(intent2)
             }
             with(sharedPrefs.edit()){
                 putBoolean(SWITCH_STATE, isChecked)
