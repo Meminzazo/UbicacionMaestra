@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -17,27 +18,25 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.material.switchmaterial.SwitchMaterial
-import com.google.firebase.database.DatabaseReference
-import com.google.firebase.firestore.FirebaseFirestore
 
 
 class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMyLocationButtonClickListener, GoogleMap.OnMyLocationClickListener  {
 
     private lateinit var map:GoogleMap
-    private lateinit var database: DatabaseReference
-    private val locationService:LocationService = LocationService()
 
     companion object {
         const val TAG = "SaveUbicacionReal" // Definimos la variable TAG aqui
         const val PREFS_NAME = "SwitchPrefs"
         const val SWITCH_STATE = "switch_state"
-    }
+        const val NOTIFICATION_PERMISSION_REQUEST_CODE = 1001
 
-    val db = FirebaseFirestore.getInstance()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_save_ubicacion_real)
+
+        requestNotificationPermission()
 
         supportActionBar?.hide()
         val bundle = intent.extras
@@ -57,7 +56,7 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         switchUbicacionReal.setOnCheckedChangeListener {  _, isChecked ->
             if (isChecked) {
                 flag = isChecked
-
+                Log.d(TAG, "Switch activo")
                 val intent = Intent(this, UbicacionGuardarService::class.java).apply {
                     putExtra("Flag", flag)
                     putExtra("Email", email)
@@ -66,24 +65,11 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
                 Log.d(TAG,"$email")
                 startService(intent)
 
-//                lifecycleScope.launch {
-//                    while(flag){
-//                        Log.d(TAG, "Entrando al while $email")
-//                        val result = locationService.getUserLocation(this@SaveUbicacionReal)
-//                        db.collection("users").document("$email").update(
-//                            mapOf(
-//                                "Latitud" to "${result?.latitude}",
-//                                "Longitud" to "${result?.longitude}"
-//                            )
-//                        )
-//                        delay(5000)
-//
-//                    }
-//                }
             }
             else{
-                val intent2 = Intent(this, MainActivity::class.java)
                 flag = false
+                Log.d(TAG, "Switch desactivado")
+                val intent2 = Intent(this, UbicacionGuardarService::class.java)
                 stopService(intent2)
             }
             with(sharedPrefs.edit()){
@@ -171,7 +157,7 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
     override fun onMyLocationButtonClick(): Boolean {
         Toast.makeText(
             this,
-            "Boton pulsado",
+            "Ubicacion aproximada",
             Toast.LENGTH_SHORT
         ).show()
         return false
@@ -187,4 +173,33 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
             Toast.LENGTH_SHORT
         ).show()
     }
+
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    NOTIFICATION_PERMISSION_REQUEST_CODE
+                )
+            }
+        }
+    }
+
+    fun onRequestPermissionsResults(requestCode: Int, permissions: Array<out String>, grantResults: IntArray){
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == NOTIFICATION_PERMISSION_REQUEST_CODE) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permiso otorgado
+            } else {
+                Toast.makeText(this, "Permission denied to post notifications", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+
 }

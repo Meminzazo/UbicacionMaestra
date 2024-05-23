@@ -1,8 +1,5 @@
 package com.esime.ubicacionmaestra.Firstapp.ui
 
-import androidx.activity.enableEdgeToEdge
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
@@ -13,34 +10,34 @@ import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.AppCompatButton
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.esime.ubicacionmaestra.R
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.material.switchmaterial.SwitchMaterial
-import com.google.firebase.database.DatabaseReference
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.util.logging.Handler
 
 class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
     GoogleMap.OnMyLocationButtonClickListener, GoogleMap.OnMyLocationClickListener {
     private lateinit var map: GoogleMap
     private val locationService: LocationService = LocationService()
     val db = FirebaseFirestore.getInstance()
-    private var marker: Marker? = null
+    private var currentmarker: Marker? = null
 
 
     companion object {
@@ -76,7 +73,6 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
         var flag = false
 
 
-
         ConsultarUbicacionEmail.setOnClickListener {
             if (emailUbicacion.text.isNotEmpty()) {
                 emailCon = emailUbicacion.text.toString()
@@ -108,6 +104,9 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                                 if (Latitud != null && Lognitud != null) {
 
                                     val coordinates = LatLng(LatitudDouble, LontiudDouble)
+
+                                    currentmarker?.remove()
+
                                     val marker =
                                         MarkerOptions().position(coordinates).title("Aprox")
                                     map.addMarker(marker)
@@ -116,6 +115,9 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                                             BitmapDescriptorFactory.HUE_AZURE
                                         )
                                     ).position(coordinates).flat(true)
+
+                                    currentmarker = map.addMarker(marker)
+
                                     map.animateCamera(
                                         CameraUpdateFactory.newLatLngZoom(coordinates, 15f),
                                         5000,

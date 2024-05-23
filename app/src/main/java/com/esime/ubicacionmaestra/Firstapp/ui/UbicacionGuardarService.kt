@@ -39,7 +39,6 @@ class UbicacionGuardarService : Service() {
         val email = bundle?.getString("Email")
         val flags = bundle?.getBoolean("Flag")
 
-        serviceJob?.cancel()
         if (flags!! && email != null) {
             startForeground(1, createNotification())
             serviceJob = serviceScope.launch {
@@ -60,10 +59,16 @@ class UbicacionGuardarService : Service() {
                 }
             }
         }
+        else{
+            serviceJob?.cancel()
+            stopForeground(true)
+            stopSelf()
+        }
         return START_STICKY
     }
 
     override fun onDestroy() {
+
         serviceJob?.cancel()
         super.onDestroy()
     }
@@ -89,7 +94,7 @@ class UbicacionGuardarService : Service() {
         )
 
         return NotificationCompat.Builder(this, notificationChannelId)
-            .setContentTitle("Ubicación Activa")
+            .setContentTitle("Ubicación en Tiempo Real Activa")
             .setContentText("La ubicación se está guardando en segundo plano.")
             .setSmallIcon(R.drawable.ic_location)
             .setContentIntent(pendingIntent)
