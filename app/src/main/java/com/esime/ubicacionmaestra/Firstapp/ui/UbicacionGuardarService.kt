@@ -55,7 +55,9 @@ class UbicacionGuardarService : Service() {
                             "Longitud" to "${result?.longitude}"
                         )
                     )
-                    delay(5000)
+                    delay(30000)
+                    // Llama a esta función cuando obtienes una nueva ubicación
+                    saveLocationToFirestore(email, result?.latitude!!, result?.longitude!!)
                 }
             }
         }
@@ -71,6 +73,23 @@ class UbicacionGuardarService : Service() {
 
         serviceJob?.cancel()
         super.onDestroy()
+    }
+    // Guardar ubicación en Firestore
+    fun saveLocationToFirestore(email: String, lat: Double, lng: Double) {
+        val locationData = hashMapOf(
+            "Latitud" to lat,
+            "Longitud" to lng,
+            "timestamp" to System.currentTimeMillis()
+        )
+
+        db.collection("users").document(email).collection("locations")
+            .add(locationData)
+            .addOnSuccessListener { documentReference ->
+                Log.d(ConsultAppR.TAG, "DocumentSnapshot added with ID: ${documentReference.id}")
+            }
+            .addOnFailureListener { e ->
+                Log.w(ConsultAppR.TAG, "Error adding document", e)
+            }
     }
     private fun createNotification(): Notification {
         val notificationChannelId = "UBICACION_GUARDAR_CHANNEL"

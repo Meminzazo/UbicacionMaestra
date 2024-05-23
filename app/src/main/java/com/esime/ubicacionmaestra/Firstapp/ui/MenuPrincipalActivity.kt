@@ -10,7 +10,11 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.esime.ubicacionmaestra.R
 
+
 class MenuPrincipalActivity : AppCompatActivity() {
+
+    val TAG = "MenuPrincipalActivity"
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -24,6 +28,12 @@ class MenuPrincipalActivity : AppCompatActivity() {
         val bundle = intent.extras
         val email = bundle?.getString("Email1")
 
+        if (email != null) {
+            Log.d(TAG, "Email para borrar datos: $email")
+        } else {
+            Log.e(TAG, "Email is null")
+        }
+
         // consultar opciones de ubicacion
        val consultButton = findViewById<Button>(R.id.consultButton)
         consultButton.setOnClickListener{
@@ -32,6 +42,7 @@ class MenuPrincipalActivity : AppCompatActivity() {
         }
        val saveUbi = findViewById<Button>(R.id.saveUbi)
         saveUbi.setOnClickListener{
+
             val intent = Intent (this, SaveUbicacionReal::class.java).apply{
                 putExtra("Email", email)
             }
@@ -40,9 +51,6 @@ class MenuPrincipalActivity : AppCompatActivity() {
         }
 
     }
-
-
-
 
 
 }
