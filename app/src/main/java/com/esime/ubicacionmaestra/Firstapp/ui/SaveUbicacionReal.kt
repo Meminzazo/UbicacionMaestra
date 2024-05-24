@@ -188,6 +188,7 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
                 )
             }
         }
+
     }
 
     fun onRequestPermissionsResults(requestCode: Int, permissions: Array<out String>, grantResults: IntArray){
