@@ -19,6 +19,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.UbicacionMaestra"
         tools:targetApi="31">
+        <activity
+            android:name=".Firstapp.ui.ViewLocationsActivity"
+            android:exported="false" />
 
         <service
             android:name=".Firstapp.ui.UbicacionGuardarService"

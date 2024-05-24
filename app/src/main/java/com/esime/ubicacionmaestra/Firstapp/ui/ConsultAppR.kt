@@ -1,38 +1,36 @@
     package com.esime.ubicacionmaestra.Firstapp.ui
 
     import android.Manifest
-    import android.annotation.SuppressLint
-    import android.content.Context
-    import android.content.pm.PackageManager
-    import android.graphics.Color
-    import android.location.Location
-    import android.os.Bundle
-    import android.util.Log
-    import android.widget.Button
-    import android.widget.EditText
-    import android.widget.Toast
-    import androidx.activity.enableEdgeToEdge
-    import androidx.appcompat.app.AppCompatActivity
-    import androidx.appcompat.widget.AppCompatButton
-    import androidx.core.app.ActivityCompat
-    import androidx.core.content.ContextCompat
-    import androidx.core.view.ViewCompat
-    import androidx.core.view.WindowInsetsCompat
-    import androidx.lifecycle.lifecycleScope
-    import com.esime.ubicacionmaestra.R
-    import com.google.android.gms.maps.CameraUpdateFactory
-    import com.google.android.gms.maps.GoogleMap
-    import com.google.android.gms.maps.OnMapReadyCallback
-    import com.google.android.gms.maps.SupportMapFragment
-    import com.google.android.gms.maps.model.BitmapDescriptorFactory
-    import com.google.android.gms.maps.model.LatLng
-    import com.google.android.gms.maps.model.Marker
-    import com.google.android.gms.maps.model.MarkerOptions
-    import com.google.android.gms.maps.model.PolylineOptions
-    import com.google.android.material.switchmaterial.SwitchMaterial
-    import com.google.firebase.firestore.FirebaseFirestore
-    import kotlinx.coroutines.delay
-    import kotlinx.coroutines.launch
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.pm.PackageManager
+import android.location.Location
+import android.os.Bundle
+import android.util.Log
+import android.widget.Button
+import android.widget.EditText
+import android.widget.Toast
+import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.AppCompatButton
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.lifecycleScope
+import com.esime.ubicacionmaestra.R
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.OnMapReadyCallback
+import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.Marker
+import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.material.switchmaterial.SwitchMaterial
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
     class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
         GoogleMap.OnMyLocationButtonClickListener, GoogleMap.OnMyLocationClickListener {
@@ -66,29 +64,14 @@
             var saveUbi = findViewById<Button>(R.id.saveUbi)
             val switchConsultar =
                 findViewById<SwitchMaterial>(R.id.ConsultarUbicacion) as SwitchMaterial
-            val sharedPrefs = getSharedPreferences(MainActivity2.PREFS_NAME, Context.MODE_PRIVATE)
-            switchConsultar.isChecked = sharedPrefs.getBoolean(MainActivity2.SWITCH_STATE, false)
+            val sharedPrefs = getSharedPreferences(MenuPrincipalActivity.PREFS_NAME, Context.MODE_PRIVATE)
+            switchConsultar.isChecked = sharedPrefs.getBoolean(MenuPrincipalActivity.SWITCH_STATE, false)
             var emailCon = ""
             val ConsultarUbicacionEmail = findViewById<AppCompatButton>(R.id.ConsultarUbicacionEmail)
             createFragment()
 
             var flag = false
 
-            val showHistoryButton = findViewById<Button>(R.id.showHistoryButton)
-
-
-            showHistoryButton.setOnClickListener {
-                if (emailUbicacion.text.isNotEmpty()) {
-                    val emailCon = emailUbicacion.text.toString()
-                    loadLocationHistory(emailCon)
-                } else {
-                    Toast.makeText(
-                        this,
-                        "Ingresa una dirección de correo válida",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            }
 
             ConsultarUbicacionEmail.setOnClickListener {
                 if (emailUbicacion.text.isNotEmpty()) {
@@ -165,7 +148,7 @@
 
                 }
                 with(sharedPrefs.edit()) {
-                    putBoolean(MainActivity2.SWITCH_STATE, isChecked)
+                    putBoolean(MenuPrincipalActivity.SWITCH_STATE, isChecked)
                     apply()
                 }
             }
@@ -215,7 +198,7 @@
             } else {
                 ActivityCompat.requestPermissions(
                     this, arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION),
-                    MainActivity.REQUEST_CODE_LOCATION
+                    MenuPrincipalActivity.REQUEST_CODE_LOCATION
                 )
             }
         }
@@ -227,7 +210,7 @@
             grantResults: IntArray
         ) {
             when (requestCode) {
-                MainActivity.REQUEST_CODE_LOCATION -> if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                MenuPrincipalActivity.REQUEST_CODE_LOCATION -> if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     map.isMyLocationEnabled = true
                 } else {
                     Toast.makeText(
@@ -275,49 +258,6 @@
                 Toast.LENGTH_SHORT
             ).show()
         }
-
-
-        fun loadLocationHistory(email: String) {
-            db.collection("users").document(email).collection("locations")
-                .orderBy("timestamp")
-                .get()
-                .addOnSuccessListener { documents ->
-                    val latLngList = mutableListOf<LatLng>()
-                    for (document in documents) {
-                        val lat = document.getDouble("Latitud")
-                        val lng = document.getDouble("Longitud")
-                        if (lat != null && lng != null) {
-                            latLngList.add(LatLng(lat, lng))
-                        }
-                    }
-                    showLocationHistoryOnMap(latLngList)
-                }
-                .addOnFailureListener { e ->
-                    Log.w(TAG, "Error getting documents: ", e)
-                }
-        }
-
-        fun showLocationHistoryOnMap(latLngList: List<LatLng>) {
-            map.clear() // Limpia el mapa antes de agregar la ruta
-
-            if (latLngList.isNotEmpty()) {
-                val options = PolylineOptions().width(5f).color(Color.BLUE).geodesic(true)
-                for (latLng in latLngList) {
-                    options.add(latLng)
-                }
-                map.addPolyline(options)
-                map.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngList.first(), 15f))
-
-                // Opcional: agrega marcadores en cada punto
-                for (latLng in latLngList) {
-                    map.addMarker(MarkerOptions().position(latLng).title("Past Location"))
-                }
-            }
-        }
-
-
-
-
 
 
     }

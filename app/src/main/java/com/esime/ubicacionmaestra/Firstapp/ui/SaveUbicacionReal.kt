@@ -116,7 +116,7 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
             ).show()
         }else{
             ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION),
-                MainActivity.REQUEST_CODE_LOCATION
+                MenuPrincipalActivity.REQUEST_CODE_LOCATION
             )
         }
     }
@@ -128,7 +128,7 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         grantResults: IntArray
     ) {
         when(requestCode){
-            MainActivity.REQUEST_CODE_LOCATION -> if(grantResults.isNotEmpty() && grantResults[0]== PackageManager.PERMISSION_GRANTED){
+            MenuPrincipalActivity.REQUEST_CODE_LOCATION -> if(grantResults.isNotEmpty() && grantResults[0]== PackageManager.PERMISSION_GRANTED){
                 map.isMyLocationEnabled = true
             }else{
                 Toast.makeText(

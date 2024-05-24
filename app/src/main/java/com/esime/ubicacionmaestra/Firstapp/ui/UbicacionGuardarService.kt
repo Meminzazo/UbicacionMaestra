@@ -18,6 +18,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 
 class UbicacionGuardarService : Service() {
@@ -56,8 +59,10 @@ class UbicacionGuardarService : Service() {
                         )
                     )
                     delay(30000)
+
                     // Llama a esta función cuando obtienes una nueva ubicación
-                    saveLocationToFirestore(email, result?.latitude!!, result?.longitude!!)
+                    saveLocation(email, result?.latitude!!, result?.longitude!!)
+
                 }
             }
         }
@@ -74,23 +79,7 @@ class UbicacionGuardarService : Service() {
         serviceJob?.cancel()
         super.onDestroy()
     }
-    // Guardar ubicación en Firestore
-    fun saveLocationToFirestore(email: String, lat: Double, lng: Double) {
-        val locationData = hashMapOf(
-            "Latitud" to lat,
-            "Longitud" to lng,
-            "timestamp" to System.currentTimeMillis()
-        )
 
-        db.collection("users").document(email).collection("locations")
-            .add(locationData)
-            .addOnSuccessListener { documentReference ->
-                Log.d(ConsultAppR.TAG, "DocumentSnapshot added with ID: ${documentReference.id}")
-            }
-            .addOnFailureListener { e ->
-                Log.w(ConsultAppR.TAG, "Error adding document", e)
-            }
-    }
     private fun createNotification(): Notification {
         val notificationChannelId = "UBICACION_GUARDAR_CHANNEL"
 
@@ -120,5 +109,21 @@ class UbicacionGuardarService : Service() {
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()
     }
+    fun saveLocation(email: String, latitude: Double, longitude: Double) {
+        val currentDate = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(Date())
+        val locationData = hashMapOf(
+            "latitude" to latitude,
+            "longitude" to longitude,
+            "timestamp" to System.currentTimeMillis()
+        )
 
+        db.collection("users").document(email).collection(currentDate)
+            .add(locationData)
+            .addOnSuccessListener {
+                Log.d(TAG, "Location successfully saved!")
+            }
+            .addOnFailureListener { e ->
+                Log.w(TAG, "Error saving location", e)
+            }
+    }
 }

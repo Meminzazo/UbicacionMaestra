@@ -5,36 +5,39 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".Firstapp.ui.MenuPrincipalActivity">
+    tools:context=".Firstapp.ui.ViewLocationsActivity">
 
-    <Button
-        android:id="@+id/consultButton"
-        android:layout_width="wrap_content"
+    <EditText
+        android:id="@+id/eTHisUbicacion"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Consultar Ubicación"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/saveUbi" />
-
-    <Button
-        android:id="@+id/saveUbi"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="68dp"
-        android:text="Ubicacion en tiempo real"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        tools:ignore="MissingConstraints" />
+        android:hint="Ingresa Email"
+        />
 
     <Button
-        android:id="@+id/viewsLocationsButton"
+        android:id="@+id/selectDateButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:text="Select Date"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.498"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/eTHisUbicacion" />
+
+    <fragment
+        android:id="@+id/map"
+        android:name="com.google.android.gms.maps.SupportMapFragment"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Historial de ubicaciones"
+        android:layout_below="@id/selectDateButton"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/consultButton" />
+        app:layout_constraintTop_toBottomOf="@+id/selectDateButton" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>
