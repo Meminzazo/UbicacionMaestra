@@ -17,6 +17,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -40,43 +41,49 @@ class UbicacionGuardarService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val bundle = intent?.extras
         val email = bundle?.getString("Email")
-        val flags = bundle?.getBoolean("Flag")
+        val shouldTrackLocation = bundle?.getBoolean("Flag") ?: false
 
-        if (flags!! && email != null) {
+        if (shouldTrackLocation && email != null) {
             startForeground(1, createNotification())
-            serviceJob = serviceScope.launch {
-                Log.d(TAG, "Entrando al coroutine $email")
+            startLocationTraking(email)
+        }
+        else{
+            stopLocationTraking()
+        }
+        return START_STICKY
+    }
 
-                while (flags!!) {
+    private fun stopLocationTraking() {
+        serviceJob?.cancel()
+        stopForeground(true)
+        stopSelf()
+    }
 
-                    Log.d(TAG, "Entrando al while $email")
+    private fun startLocationTraking(email: String) {
+        serviceJob = serviceScope.launch {
+            Log.d(TAG, "Entrando al coroutine $email")
 
-                    val result = locationService.getUserLocation(this@UbicacionGuardarService)
+            while (isActive) {
+                Log.d(TAG, "Entrando al while $email")
+
+                val result = locationService.getUserLocation(this@UbicacionGuardarService)
+                if (result != null) {
+                    //Función cuando obtienes una nueva ubicación
+                    saveLocation(email, result.latitude, result.longitude)
                     db.collection("users").document("$email").update(
                         mapOf(
                             "Latitud" to "${result?.latitude}",
                             "Longitud" to "${result?.longitude}"
                         )
                     )
-                    delay(30000)
-
-                    // Llama a esta función cuando obtienes una nueva ubicación
-                    saveLocation(email, result?.latitude!!, result?.longitude!!)
-
                 }
+                delay(30000)
             }
         }
-        else{
-            serviceJob?.cancel()
-            stopForeground(true)
-            stopSelf()
-        }
-        return START_STICKY
     }
 
     override fun onDestroy() {
-
-        serviceJob?.cancel()
+        stopLocationTraking()
         super.onDestroy()
     }
 

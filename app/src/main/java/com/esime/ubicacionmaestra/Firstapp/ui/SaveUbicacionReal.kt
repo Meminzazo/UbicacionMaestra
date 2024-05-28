@@ -28,8 +28,10 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         const val TAG = "SaveUbicacionReal" // Definimos la variable TAG aqui
         const val PREFS_NAME = "SwitchPrefs"
         const val SWITCH_STATE = "switch_state"
-        const val NOTIFICATION_PERMISSION_REQUEST_CODE = 1001
 
+        const val LOCATION_PERMISSION_REQUEST_CODE = 1001
+        const val BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE = 1002
+        const val NOTIFICATION_PERMISSION_REQUEST_CODE = 1003
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -37,6 +39,7 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         setContentView(R.layout.activity_save_ubicacion_real)
 
         requestNotificationPermission()
+        requestLocationPermission()
 
         supportActionBar?.hide()
         val bundle = intent.extras
@@ -44,40 +47,36 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         createFragment()
 
         val switchUbicacionReal = findViewById<SwitchMaterial>(R.id.UbicacionReal) as SwitchMaterial
-
-
         val sharedPrefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         switchUbicacionReal.isChecked = sharedPrefs.getBoolean(SWITCH_STATE, false)
 
-        var flag = false
 
         switchUbicacionReal.setOnCheckedChangeListener {  _, isChecked ->
             if (isChecked) {
-                flag = isChecked
                 Log.d(TAG, "Switch activo")
                 val intent = Intent(this, UbicacionGuardarService::class.java).apply {
-                    putExtra("Flag", flag)
+                    putExtra("Flag", true)
                     putExtra("Email", email)
                 }
-                Log.d(TAG, "$flag")
-                Log.d(TAG,"$email")
-                startService(intent)
-
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
+                    startForegroundService(intent)
+                }
+                else{
+                    startService(intent)
+                }
             }
             else{
-                flag = false
                 Log.d(TAG, "Switch desactivado")
-                val intent2 = Intent(this, UbicacionGuardarService::class.java)
-                stopService(intent2)
+                val intent = Intent(this, UbicacionGuardarService::class.java)
+                stopService(intent)
             }
             with(sharedPrefs.edit()){
                 putBoolean(SWITCH_STATE, isChecked)
                 apply()
             }
         }
-
-
     }
+
 
     private fun createFragment(){
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
@@ -94,6 +93,11 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
     private fun isLocationPermissionGranted() = ContextCompat.checkSelfPermission(
         this,
         Manifest.permission.ACCESS_FINE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
+
+    private fun isBackgroundLocationPermissionGranted() = ContextCompat.checkSelfPermission(
+        this,
+        Manifest.permission.ACCESS_BACKGROUND_LOCATION
     ) == PackageManager.PERMISSION_GRANTED
 
     @SuppressLint("MissingPermission")
@@ -120,21 +124,56 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
     }
 
     @SuppressLint("MissingPermission", "MissingSuperCall")
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        when(requestCode){
-            MenuPrincipalActivity.REQUEST_CODE_LOCATION -> if(grantResults.isNotEmpty() && grantResults[0]== PackageManager.PERMISSION_GRANTED){
-                map.isMyLocationEnabled = true
-            }else{
-                Toast.makeText(
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        when (requestCode) {
+            LOCATION_PERMISSION_REQUEST_CODE -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        requestBackgroundLocationPermission()
+                    } else {
+                        map.isMyLocationEnabled = true
+                    }
+                } else {
+                    Toast.makeText(
+                        this,
+                        "Porfavor activa el permiso de ubicacion para poder usar esta caracteristica",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+
+            BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    map.isMyLocationEnabled = true
+                } else {
+                    Toast.makeText(
+                        this,
+                        "Porfavor activa el permiso de ubicacion para poder usar esta caracteristica",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+
+            NOTIFICATION_PERMISSION_REQUEST_CODE -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(
+                        this,
+                        "Notificaciones activadas",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
+    }
+    private fun requestBackgroundLocationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (!isBackgroundLocationPermissionGranted()) {
+                ActivityCompat.requestPermissions(
                     this,
-                    "Porfavor activa el permiso de ubicacion para poder usar esta caracteristica",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }else -> {}
+                    arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
+                    BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE
+                )
+            }
         }
     }
 
@@ -183,7 +222,5 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
                 )
             }
         }
-
     }
-
 }

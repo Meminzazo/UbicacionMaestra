@@ -69,7 +69,7 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
         val datePickerDialog = DatePickerDialog(
             this,
             { _: DatePicker, year: Int, month: Int, dayOfMonth: Int ->
-                val selectedDate = String.format(Locale.getDefault(), "$dayOfMonth-0${month+1}-$year")
+                val selectedDate = String.format(Locale.getDefault(), "%02d-%02d-%d", dayOfMonth, month + 1, year)
                 loadLocationsForDate(selectedDate,emailhis)
             },
             calendar.get(Calendar.YEAR),
@@ -81,19 +81,28 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun loadLocationsForDate(date: String, emailhis: String?) {
 
+            Log.d(TAG, "Cargando ubicaciones para la fecha: $date y el email: $emailhis")
             db.collection("users").document(emailhis!!).collection(date)
             .orderBy("timestamp")
             .get()
             .addOnSuccessListener { documents ->
-                val latLngList = mutableListOf<LatLng>()
-                for (document in documents) {
-                    val lat = document.getDouble("latitude")
-                    val lng = document.getDouble("longitude")
-                    if (lat != null && lng != null) {
-                        latLngList.add(LatLng(lat, lng))
-                    }
+                if (documents.isEmpty) {
+                    Log.d(TAG, "No se encontraron documentos para la fecha: $date")
+                    return@addOnSuccessListener
                 }
-                showLocationHistoryOnMap(latLngList)
+                else{
+                    val latLngList = mutableListOf<LatLng>()
+                    for (document in documents) {
+                        val lat = document.getDouble("latitude")
+                        val lng = document.getDouble("longitude")
+                        if (lat != null && lng != null) {
+                            latLngList.add(LatLng(lat, lng))
+                            Log.d(TAG, "Ubicacion agregada: $lat, $lng")
+                        }
+                        Log.d(TAG, "Documento recuperado: $document")
+                    }
+                    showLocationHistoryOnMap(latLngList)
+                }
             }
             .addOnFailureListener { e ->
                 Log.w(TAG, "Error getting documents: ", e)
