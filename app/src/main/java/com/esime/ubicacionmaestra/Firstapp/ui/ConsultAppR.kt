@@ -7,12 +7,10 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
 import android.util.Log
-import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.AppCompatButton
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
@@ -35,16 +33,12 @@ import kotlinx.coroutines.launch
     class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
         GoogleMap.OnMyLocationButtonClickListener, GoogleMap.OnMyLocationClickListener {
         private lateinit var map: GoogleMap
-        private val locationService: LocationService = LocationService()
-        val db = FirebaseFirestore.getInstance()
+        private val db = FirebaseFirestore.getInstance()
         private var currentMarker: Marker? = null
 
 
         companion object {
             const val TAG = "ConsultarUbicacionReal" // Definimos la variable TAG aqui
-            const val PREFS_NAME = "SwitchPrefs"
-            const val SWITCH_STATE = "switch_state"
-            const val REQUEST_CODE_LOCATION = 0
         }
 
 
@@ -60,50 +54,37 @@ import kotlinx.coroutines.launch
                 insets
             }
             val emailUbicacion = findViewById<EditText>(R.id.emailUbicacion)
-            val consultButton = findViewById<AppCompatButton>(R.id.consultButton)
-            var saveUbi = findViewById<Button>(R.id.saveUbi)
-            val switchConsultar =
-                findViewById<SwitchMaterial>(R.id.ConsultarUbicacion) as SwitchMaterial
+
+            val switchConsultar = findViewById<SwitchMaterial>(R.id.ConsultarUbicacion) as SwitchMaterial
             val sharedPrefs = getSharedPreferences(MenuPrincipalActivity.PREFS_NAME, Context.MODE_PRIVATE)
             switchConsultar.isChecked = sharedPrefs.getBoolean(MenuPrincipalActivity.SWITCH_STATE, false)
             var emailCon = ""
-            val ConsultarUbicacionEmail = findViewById<AppCompatButton>(R.id.ConsultarUbicacionEmail)
             createFragment()
 
             var flag = false
 
-
-            ConsultarUbicacionEmail.setOnClickListener {
-                if (emailUbicacion.text.isNotEmpty()) {
-                    emailCon = emailUbicacion.text.toString()
-                    Log.d(TAG, "email a consultar es: ${emailCon}")
-                } else {
-                    Toast.makeText(
-                        this,
-                        "Ingresa una direccion de correo valida",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            }
-
             switchConsultar.setOnCheckedChangeListener { _, isChecked ->
-                if (isChecked) {
+
+
+                if (isChecked && emailUbicacion.text.isNotEmpty()) {
+
+                    emailCon = emailUbicacion.text.toString()
                     flag = isChecked
                     lifecycleScope.launch {
-                        val docRef = db.collection("users").document("$emailCon")
+                        val docRef = db.collection("users").document(emailCon)
                         while (flag) {
                             docRef.get().addOnSuccessListener { document ->
                                 if (document != null) {
 
-                                    var Latitud = document.getString("Latitud")
-                                    var Lognitud = document.getString("Longitud")
+                                    val LatitudString = document.getString("Latitud")
+                                    val LognitudString = document.getString("Longitud")
 
-                                    var LatitudDouble = Latitud!!.toDouble()
-                                    var LontiudDouble = Lognitud!!.toDouble()
+                                    val LatitudDouble = LatitudString!!.toDouble()
+                                    val LongitudDouble = LognitudString!!.toDouble()
 
-                                    if (Latitud != null && Lognitud != null) {
+                                    if (LatitudDouble != null && LongitudDouble != null) {
 
-                                        val coordinates = LatLng(LatitudDouble, LontiudDouble)
+                                        val coordinates = LatLng(LatitudDouble, LongitudDouble)
 
                                         currentMarker?.remove()
 
@@ -125,8 +106,8 @@ import kotlinx.coroutines.launch
 
 
 
-                                        Log.d(TAG, "Latitud: ${Latitud}")
-                                        Log.d(TAG, "Longitud: ${Lognitud}")
+                                        Log.d(TAG, "Latitud: ${LatitudDouble}")
+                                        Log.d(TAG, "Longitud: ${LongitudDouble}")
                                     } else {
                                         Log.d(TAG, "No hay Latitud ni Longitud")
                                     }
@@ -143,9 +124,10 @@ import kotlinx.coroutines.launch
                     }
 
                 } else {
+                    Toast.makeText(this, "Ingresa una direccion de correo valida", Toast.LENGTH_LONG).show()
                     flag = false
                     currentMarker?.remove() // Si el switch se apaga, elimina el marcador actual
-
+                    switchConsultar.isChecked = false
                 }
                 with(sharedPrefs.edit()) {
                     putBoolean(MenuPrincipalActivity.SWITCH_STATE, isChecked)
@@ -187,7 +169,7 @@ import kotlinx.coroutines.launch
         private fun requestLocationPermission() {
             if (ActivityCompat.shouldShowRequestPermissionRationale(
                     this,
-                    android.Manifest.permission.ACCESS_FINE_LOCATION
+                    Manifest.permission.ACCESS_FINE_LOCATION
                 )
             ) {
                 Toast.makeText(
@@ -197,7 +179,7 @@ import kotlinx.coroutines.launch
                 ).show()
             } else {
                 ActivityCompat.requestPermissions(
-                    this, arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION),
+                    this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
                     MenuPrincipalActivity.REQUEST_CODE_LOCATION
                 )
             }
@@ -249,9 +231,6 @@ import kotlinx.coroutines.launch
 
 
         override fun onMyLocationClick(p0: Location) {
-            val lat = p0.latitude
-            val lon = p0.longitude
-
             Toast.makeText(
                 this,
                 "Estas en ${p0.latitude}, ${p0.longitude}",

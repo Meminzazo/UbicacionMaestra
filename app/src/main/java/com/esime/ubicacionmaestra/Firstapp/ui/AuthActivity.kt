@@ -3,9 +3,9 @@ package com.esime.ubicacionmaestra.Firstapp.ui
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
-import android.widget.FilterQueryProvider
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -13,10 +13,20 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.esime.ubicacionmaestra.R
 import com.google.firebase.auth.FirebaseAuth
-import org.checkerframework.common.returnsreceiver.qual.This
+import com.google.firebase.firestore.FirebaseFirestore
 
 
 class AuthActivity : AppCompatActivity() {
+    private lateinit var auth: FirebaseAuth   //variable de autenticacion
+    val db = FirebaseFirestore.getInstance()
+    val user = hashMapOf(
+        "Latitud" to "-",
+        "Longitud" to "-",
+        "Numero" to "-",
+        "Nombre" to "-",
+        "Apellido" to "-",
+        "GrupoID" to "-"
+    )
     @SuppressLint("WrongViewCast")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,9 +48,29 @@ class AuthActivity : AppCompatActivity() {
         val passEditText = findViewById<EditText>(R.id.passEditText)
         val loginButton = findViewById<Button>(R.id.loginButton)
 
+        auth = FirebaseAuth.getInstance()
 
-        registrarButtom.setOnClickListener()
+        ///////// implementacion de la autenticacion
+        auth = FirebaseAuth.getInstance()   //creamos una autenticacion
+        val currentUser = auth.currentUser
+        if (currentUser != null)
         {
+            //si el usuario esta autenticasdo, redirige a home
+            val intent = Intent(this, HomeActivity::class.java)
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK) //flag para definir la actividad actual y limpiar la anterior
+            startActivity(intent)
+            finish()  //finaliza la pila de actividad anterior
+        }
+        else
+        {
+            //no hace nada y pasa a las demas actividades
+
+
+        }
+
+        registrarButtom.setOnClickListener() {
+            val email = emailEditText.text.toString()
+            crearcolletion(email)
             if(emailEditText.text.isNotEmpty() && passEditText.text.isNotEmpty())           //comprueba si los campos son vacios
             {
                 FirebaseAuth.getInstance().createUserWithEmailAndPassword(emailEditText.text.toString(),        //servicio de firebase autentication
@@ -102,7 +132,14 @@ class AuthActivity : AppCompatActivity() {
         startActivity(homeIntent)
     }
 
+    fun crearcolletion(email: String){
 
+        // Add a new document with a generated ID
 
+        db.collection("users").document(email)
+            .set(user)
+            .addOnSuccessListener { Log.d(HomeActivity.TAG, "Documento creado exitosamente") }
+            .addOnFailureListener { e -> Log.w(HomeActivity.TAG, "Error al crear el documento", e) }
+    }
 
 }

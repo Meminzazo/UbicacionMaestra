@@ -49,8 +49,6 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         val sharedPrefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         switchUbicacionReal.isChecked = sharedPrefs.getBoolean(SWITCH_STATE, false)
 
-        val isCheck = switchUbicacionReal.isChecked
-
         var flag = false
 
         switchUbicacionReal.setOnCheckedChangeListener {  _, isChecked ->
@@ -108,14 +106,14 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         }
     }
     private fun requestLocationPermission(){
-        if(ActivityCompat.shouldShowRequestPermissionRationale(this, android.Manifest.permission.ACCESS_FINE_LOCATION)) {
+        if(ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
             Toast.makeText(
                 this,
                 "Activa el permiso de ubicacion para poder usar esta caracteristica",
                 Toast.LENGTH_SHORT
             ).show()
         }else{
-            ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION),
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
                 MenuPrincipalActivity.REQUEST_CODE_LOCATION
             )
         }
@@ -164,9 +162,6 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
     }
 
     override fun onMyLocationClick(p0: Location) {
-        val lat = p0.latitude
-        val lon = p0.longitude
-
         Toast.makeText(
             this,
             "Estas en ${p0.latitude}, ${p0.longitude}",
@@ -190,17 +185,5 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         }
 
     }
-
-    fun onRequestPermissionsResults(requestCode: Int, permissions: Array<out String>, grantResults: IntArray){
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == NOTIFICATION_PERMISSION_REQUEST_CODE) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permiso otorgado
-            } else {
-                Toast.makeText(this, "Permission denied to post notifications", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
 
 }

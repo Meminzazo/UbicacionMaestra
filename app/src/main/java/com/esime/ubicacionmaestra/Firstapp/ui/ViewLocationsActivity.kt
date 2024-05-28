@@ -35,17 +35,13 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_view_locations)
 
-//        val bundle = intent.extras
-//        val emailhis = bundle?.getString("Email")
-
-
         supportActionBar?.hide()
 
         val ButtonHistorialUbicacion = findViewById<EditText>(R.id.eTHisUbicacion)
 
         val selectDateButton = findViewById<Button>(R.id.selectDateButton)
         selectDateButton.setOnClickListener {
-            var emailHisUbi = ButtonHistorialUbicacion.text.toString()
+            val emailHisUbi = ButtonHistorialUbicacion.text.toString()
 
             Log.d(TAG, "Historial de ubicaciones de: $emailHisUbi")
             if(emailHisUbi.isEmpty()){

@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="com.google.firebase.firestore.permission.READ" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
 
     <application
         android:allowBackup="true"
@@ -19,6 +20,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.UbicacionMaestra"
         tools:targetApi="31">
+        <activity
+            android:name=".Firstapp.ui.PerfilActivity"
+            android:exported="false" />
         <activity
             android:name=".Firstapp.ui.ViewLocationsActivity"
             android:exported="false" />
@@ -37,9 +41,6 @@
             android:name=".Firstapp.ui.SaveUbicacionReal"
             android:exported="false" />
         <activity
-            android:name=".Firstapp.ui.ConsultarUbicacionReal"
-            android:exported="false" />
-        <activity
             android:name=".Firstapp.ui.MenuPrincipalActivity"
             android:exported="false" />
         <activity
@@ -54,19 +55,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".Firstapp.ui.MainActivity2"
-            android:exported="false"
-            android:label="@string/title_activity_main2"
-            android:theme="@style/Theme.UbicacionMaestra.NoActionBar" />
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="@string/google_maps_api_key" />
-
-        <activity
-            android:name=".Firstapp.ui.MainActivity"
-            android:exported="true" />
     </application>
 
 </manifest>

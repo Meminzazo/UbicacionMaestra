@@ -2,10 +2,8 @@ package com.esime.ubicacionmaestra.Firstapp.ui
 
 import android.content.Intent
 import android.os.Bundle
-import android.provider.ContactsContract.CommonDataKinds.Email
 import android.util.Log
 import android.widget.Button
-import android.widget.EditText
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -20,12 +18,16 @@ enum class ProviderType()
     BASIC
 }
 class HomeActivity : AppCompatActivity() {
+    private lateinit var auth: FirebaseAuth
+
     val db = FirebaseFirestore.getInstance()
     val user = hashMapOf(
         "Latitud" to "-",
-        "Logitud" to "-",
-        "Numero" to "@",
-        "Nombre" to "-"
+        "Longitud" to "-",
+        "Numero" to "-",
+        "Nombre" to "-",
+        "Apellido" to "-",
+        "GrupoID" to "-"
     )
     companion object {
         const val TAG = "HomeActivity" // Definimos la variable TAG aqui
@@ -40,7 +42,9 @@ class HomeActivity : AppCompatActivity() {
             insets
         }
         supportActionBar?.hide()
-            // Setup
+        auth = FirebaseAuth.getInstance()
+
+        // Setup
         val bundle = intent.extras                              // recuperar parametros
         val email = bundle?.getString("Email")              //parametro del home layut "como nombramos al edit text"
         val provider = bundle?.getString("provider")
@@ -55,17 +59,28 @@ class HomeActivity : AppCompatActivity() {
         val logoutBottom = findViewById<Button>(R.id.logoutButtom)
         val goButton = findViewById<Button>(R.id.goButton)
 
+        val perfilButton = findViewById<Button>(R.id.perfilButton)
+
         emailTextView.text = email
         providerTextView.text = provider
 
         logoutBottom.setOnClickListener()
         {
-            FirebaseAuth.getInstance().signOut()   //llama la instancia cerrar sesion
-            onBackPressed()                         //vuelve a la pantalla anterior
-
+            auth.signOut()
+            val intent = Intent(this, AuthActivity::class.java)
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK) //flag para definir la actividad actual y limpiar la anterior
+            startActivity(intent)
+            finish() //mata la actividad anterior
         }
 
-        crearcolletion(email)
+        perfilButton.setOnClickListener{
+            val intent = Intent(this, PerfilActivity::class.java).apply {
+                putExtra("Email1", email)
+                Log.d("HomeActivity", "Email: $email")
+            }
+            startActivity(intent)
+        }
+
         // lanza la aplicacion
         goButton.setOnClickListener{
             val intent = Intent(this, MenuPrincipalActivity::class.java).apply {
@@ -78,13 +93,4 @@ class HomeActivity : AppCompatActivity() {
             // Nota, el email no se manda y solo se ve el zzz pipipipi pero ya enlace las pantallas solo falta un boton que haga salir la app
     }
 
-    fun crearcolletion(email: String){
-
-        // Add a new document with a generated ID
-
-        db.collection("users").document("$email")
-            .set(user)
-            .addOnSuccessListener { Log.d(TAG, "Documento creado exitosamente") }
-            .addOnFailureListener { e -> Log.w(TAG, "Error al crear el documento", e) }
-    }
 }

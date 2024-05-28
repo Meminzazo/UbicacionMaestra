@@ -10,16 +10,14 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.esime.ubicacionmaestra.R
-import com.google.firebase.firestore.FirebaseFirestore
 
 
 class MenuPrincipalActivity : AppCompatActivity() {
 
     val TAG = "MenuPrincipalActivity"
 
-    val db = FirebaseFirestore.getInstance()
     companion object {
-            const val REQUEST_CODE_LOCATION = 0
+        const val REQUEST_CODE_LOCATION = 0
         const val PREFS_NAME = "SwitchPrefs"
         const val SWITCH_STATE = "switch_state"
     }
