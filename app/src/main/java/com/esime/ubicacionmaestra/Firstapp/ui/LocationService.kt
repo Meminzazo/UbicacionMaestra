@@ -56,6 +56,7 @@ class LocationService {
                 }
             }
 
+
             fusedLocationProviderClient?.requestLocationUpdates(locationRequest!!,
                 locationCallback as LocationCallback, context.mainLooper)
         }
