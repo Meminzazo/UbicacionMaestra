@@ -81,6 +81,7 @@ class HomeActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
+
         // lanza la aplicacion
         goButton.setOnClickListener{
             val intent = Intent(this, MenuPrincipalActivity::class.java).apply {
