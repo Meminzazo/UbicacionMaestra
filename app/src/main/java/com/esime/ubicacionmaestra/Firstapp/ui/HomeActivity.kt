@@ -20,6 +20,7 @@ enum class ProviderType()
     BASIC
 }
 class HomeActivity : AppCompatActivity() {
+    private lateinit var auth: FirebaseAuth
     val db = FirebaseFirestore.getInstance()
     val user = hashMapOf(
         "Latitud" to "-",
@@ -40,6 +41,7 @@ class HomeActivity : AppCompatActivity() {
             insets
         }
         supportActionBar?.hide()
+        auth = FirebaseAuth.getInstance()
             // Setup
         val bundle = intent.extras                              // recuperar parametros
         val email = bundle?.getString("Email")              //parametro del home layut "como nombramos al edit text"
@@ -58,12 +60,25 @@ class HomeActivity : AppCompatActivity() {
         emailTextView.text = email
         providerTextView.text = provider
 
+
+
+        //interaccion del boton de cierre de sesion
+        logoutBottom.setOnClickListener{
+            auth.signOut()
+            val intent = Intent(this, AuthActivity::class.java)
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK) //flag para definir la actividad actual y limpiar la anterior
+            startActivity(intent)
+            finish() //mata la actividad anterior
+        }
+
+//codigo anterior de la interaccion con el boton de login
+        /*
         logoutBottom.setOnClickListener()
         {
             FirebaseAuth.getInstance().signOut()   //llama la instancia cerrar sesion
             onBackPressed()                         //vuelve a la pantalla anterior
 
-        }
+        } */
 
         crearcolletion(email)
         // lanza la aplicacion
@@ -87,4 +102,8 @@ class HomeActivity : AppCompatActivity() {
             .addOnSuccessListener { Log.d(TAG, "Documento creado exitosamente") }
             .addOnFailureListener { e -> Log.w(TAG, "Error al crear el documento", e) }
     }
+
+
+
+
 }

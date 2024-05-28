@@ -18,6 +18,7 @@ import org.checkerframework.common.returnsreceiver.qual.This
 
 class AuthActivity : AppCompatActivity() {
     @SuppressLint("WrongViewCast")
+    private lateinit var auth: FirebaseAuth   //variable de autenticacion
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -29,14 +30,40 @@ class AuthActivity : AppCompatActivity() {
         }
         supportActionBar?.hide()
         setup()
+
+
+
+
     }
     private fun setup(){
-
+        //lateinit var auth: FirebaseAuth
         title = "Autenticación"
         val registrarButtom = findViewById<Button>(R.id.registrarButton)            //no me dejo agregar las id asi por que si XD
         val emailEditText = findViewById<EditText>(R.id.emailEditText)
         val passEditText = findViewById<EditText>(R.id.passEditText)
         val loginButton = findViewById<Button>(R.id.loginButton)
+        auth = FirebaseAuth.getInstance()
+
+        ///////// implementacion de la autenticacion
+        auth = FirebaseAuth.getInstance()   //creamos una autenticacion
+        val currentUser = auth.currentUser
+        if (currentUser != null)
+        {
+            //si el usuario esta autenticasdo, redirige a home
+            val intent = Intent(this, HomeActivity::class.java)
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK) //flag para definir la actividad actual y limpiar la anterior
+            startActivity(intent)
+            finish()  //finaliza la pila de actividad anterior
+        }
+        else
+        {
+            //no hace nada y pasa a las demas actividades
+
+
+        }
+
+
+
 
 
         registrarButtom.setOnClickListener()
@@ -59,7 +86,7 @@ class AuthActivity : AppCompatActivity() {
         }
         // hacer lo mismo con el boton de login
 
-        loginButton.setOnClickListener()
+       loginButton.setOnClickListener()
         {
             if(emailEditText.text.isNotEmpty() && passEditText.text.isNotEmpty())           //comprueba si los campos son vacios
             {
@@ -77,6 +104,9 @@ class AuthActivity : AppCompatActivity() {
                 }
             }
         }
+
+
+
 
 
 
