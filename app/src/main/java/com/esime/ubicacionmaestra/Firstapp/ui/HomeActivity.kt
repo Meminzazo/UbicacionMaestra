@@ -18,6 +18,8 @@ enum class ProviderType()
     BASIC
 }
 class HomeActivity : AppCompatActivity() {
+   /* val bundle1 = intent.extras
+    val email2 = bundle1?.getString("Email") */
     private lateinit var auth: FirebaseAuth
 
     val db = FirebaseFirestore.getInstance()
@@ -44,11 +46,18 @@ class HomeActivity : AppCompatActivity() {
         supportActionBar?.hide()
         auth = FirebaseAuth.getInstance()
 
+
+
+        val sharedPreferences = getSharedPreferences("my_prefs", MODE_PRIVATE)
+        val emailP = sharedPreferences.getString("emailPersistente", "Guest")?:"Guest" // "Guest" es el valor por defecto
+
+
+
         // Setup
         val bundle = intent.extras                              // recuperar parametros
-        val email = bundle?.getString("Email")              //parametro del home layut "como nombramos al edit text"
-        val provider = bundle?.getString("provider")
-        setup(email?: "zzz", provider?: "" )  //en caso de no existir se manda algo vacio
+        val email = bundle?.getString("Email")  ?: emailP            //parametro del home layut "como nombramos al edit text"
+        val provider = bundle?.getString("provider") ?:""
+        setup(email,provider)  //en caso de no existir se manda algo vacio
     }
 
     private fun setup(email: String, provider: String)
@@ -58,6 +67,11 @@ class HomeActivity : AppCompatActivity() {
         val providerTextView= findViewById<TextView>(R.id.providerTextView)
         val logoutBottom = findViewById<Button>(R.id.logoutButtom)
         val goButton = findViewById<Button>(R.id.goButton)
+
+        val sharedPreferences = getSharedPreferences("my_prefs", MODE_PRIVATE)
+        val editor = sharedPreferences.edit()
+        editor.putString("emailPersistente", email)
+        editor.apply()
 
         val perfilButton = findViewById<Button>(R.id.perfilButton)
 

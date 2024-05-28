@@ -28,7 +28,7 @@ class AuthActivity : AppCompatActivity() {
         "GrupoID" to "-"
     )
     @SuppressLint("WrongViewCast")
-    private lateinit var auth: FirebaseAuth   //variable de autenticacion
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -75,25 +75,7 @@ class AuthActivity : AppCompatActivity() {
 
 
 
-        auth = FirebaseAuth.getInstance()
 
-        ///////// implementacion de la autenticacion
-        auth = FirebaseAuth.getInstance()   //creamos una autenticacion
-        val currentUser = auth.currentUser
-        if (currentUser != null)
-        {
-            //si el usuario esta autenticasdo, redirige a home
-            val intent = Intent(this, HomeActivity::class.java)
-            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK) //flag para definir la actividad actual y limpiar la anterior
-            startActivity(intent)
-            finish()  //finaliza la pila de actividad anterior
-        }
-        else
-        {
-            //no hace nada y pasa a las demas actividades
-
-
-        }
 
         registrarButtom.setOnClickListener() {
             val email = emailEditText.text.toString()
