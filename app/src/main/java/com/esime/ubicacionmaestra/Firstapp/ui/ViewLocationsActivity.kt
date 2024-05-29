@@ -23,55 +23,49 @@ import java.util.Calendar
 import java.util.Locale
 
 class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
-
+    // Definimos el objeto GoogleMap para usar el mapa
     private lateinit var map: GoogleMap
+
+    // Definimos la instancia de FirebaseFirestore para acceder a la base de datos Firestore
     private val db = FirebaseFirestore.getInstance()
+
+    // Definimos la etiqueta para el registro de logcat
     private val TAG = "ViewLocationsActivity"
 
-
-
+    // Funcion que se ejecuta al inicio de la activity
     @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_view_locations)
 
-        supportActionBar?.hide()
+        supportActionBar?.hide()    // Oculta la barra de acción
 
         val bundle = intent.extras
-        val email = bundle?.getString("Email")
+        val email = bundle?.getString("Email")  // Obtiene el email del intent
 
+        // Inicializamos los elementos de la interfaz de usuario (Botones, EditText)
         val ButtonHistorialUbicacion = findViewById<EditText>(R.id.eTHisUbicacion)
-
         val selectDateButton = findViewById<Button>(R.id.selectDateButton)
 
 
+        selectDateButton.setOnClickListener {   // Cuando se hace click en el boton de la seleccion de fecha
+            if(ButtonHistorialUbicacion.text.isNotEmpty()){ // Si el EditText no esta vacio
 
-        selectDateButton.setOnClickListener {
-            if(ButtonHistorialUbicacion.text.isNotEmpty()){
-                val docRef = db.collection("users").document(email!!)
 
+                val docRef = db.collection("users").document(email!!)   // Obtiene el documento del email del usuario actual
                 val emailHisUbi = ButtonHistorialUbicacion.text.toString()
+                val docRef2 = db.collection("users").document(emailHisUbi)  // Obtiene el documento del email del usuario que se esta buscando
 
-                val docRef2 = db.collection("users").document(emailHisUbi)
+                docRef.get().addOnSuccessListener { document -> // Si el documento del usuario actual se obtiene
 
-                docRef.get().addOnSuccessListener { document ->
+                    val GroupIDPropio = document.getString("GrupoID")   // Guarda el GroupID del usuario actual
 
-                    val GroupIDPropio = document.getString("GrupoID")
+                    docRef2.get().addOnSuccessListener { document2 ->   // Si el documento del usuario que se esta buscando se obtiene
 
-                    Log.d(TAG, "onCreate: $GroupIDPropio")
+                        val GroupIDHis = document2.getString("GrupoID") // Guarda el GroupID del usuario que se esta buscando
 
-                    docRef2.get().addOnSuccessListener { document2 ->
-
-                        val GroupIDHis = document2.getString("GrupoID")
-
-                        Log.d(TAG, "onCreate: $GroupIDHis")
-
-                        if(GroupIDPropio == GroupIDHis){
-
-                            Log.d(TAG, "onCreate: $emailHisUbi")
-                            Log.d(TAG, "onCreate: $email")
-
-                            showDatePickerDialog(emailHisUbi)
+                        if(GroupIDPropio == GroupIDHis){    // Comprueba que esten en el mismo grupo
+                            showDatePickerDialog(emailHisUbi)   // Muestra el Selector del dia
                         }
                         else{
                             Toast.makeText(this, "El email ingresado es incorrecto o no pertenecen al mismo grupo!", Toast.LENGTH_LONG).show()
@@ -84,10 +78,10 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
             }
 
         }
-
+        // Llamamos a la funcion para crear el mapa
         createMapFragment()
     }
-
+///////////////////////////////////////////// FUNCIONES DEL MAPA ////////////////////////////////////////////////////
     private fun createMapFragment() {
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
@@ -96,7 +90,9 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
     }
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    // Funcion para mostrar el Selector del Mapa
     private fun showDatePickerDialog(emailhis: String?) {
         val calendar = Calendar.getInstance()
         val datePickerDialog = DatePickerDialog(
@@ -112,11 +108,12 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
         datePickerDialog.show()
     }
 
+    // Funcion para cargar las ubicaciones guardadas en la base de datos
     private fun loadLocationsForDate(date: String, emailhis: String?) {
 
-            Log.d(TAG, "Cargando ubicaciones para la fecha: $date y el email: $emailhis")
+            // Conexiona a la base de datos Firestore
             db.collection("users").document(emailhis!!).collection(date)
-            .orderBy("timestamp")
+            .orderBy("timestamp")   // Ordena por fecha en orden ascendente deacuerdo con el timestamp
             .get()
             .addOnSuccessListener { documents ->
                 if (documents.isEmpty) {
@@ -134,7 +131,7 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
                         }
                         Log.d(TAG, "Documento recuperado: $document")
                     }
-                    showLocationHistoryOnMap(latLngList)
+                    showLocationHistoryOnMap(latLngList)    // Muestra la ubicacion en el mapa
                 }
             }
             .addOnFailureListener { e ->
@@ -144,6 +141,7 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     }
 
+    // Funcion para mostrar las ubicaciones en el mapa
     private fun showLocationHistoryOnMap(latLngList: List<LatLng>) {
         map.clear() // Limpia el mapa antes de agregar la ruta
 

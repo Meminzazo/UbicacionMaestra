@@ -26,67 +26,76 @@ import java.util.Locale
 
 class UbicacionGuardarService : Service() {
 
-    val TAG = "UbicacionGuardarService" // Definimos la variable TAG aqui
+    val TAG = "UbicacionGuardarService" // Definimos la variable TAG para el Logcat
 
+    // Creamos una instancia de LocationService para la consulta de ubicación
     private val locationService:LocationService = LocationService()
+
+    //Creamos una instancia de FirebaseFirestore para guardar los datos en la base de datos
     val db = FirebaseFirestore.getInstance()
+
+    // Variables para la corrutina del servicio
     private var serviceJob: Job? = null
     private val serviceScope = CoroutineScope(Dispatchers.IO)
 
+    // Era algo del servicio pero no recuerdo que era pero nada relevante
     override fun onBind(intent: Intent): IBinder? {
         return null
     }
 
-
+    // Función con la que empieza el como onCreate de una activity
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val bundle = intent?.extras
-        val email = bundle?.getString("Email")
-        val shouldTrackLocation = bundle?.getBoolean("Flag") ?: false
+        val email = bundle?.getString("Email")  // Obtén el valor de email del intent
+        val shouldTrackLocation = bundle?.getBoolean("Flag") ?: false   // Obtén el valor de shouldTrackLocation del intent para el While
 
-        if (shouldTrackLocation && email != null) {
-            startForeground(1, createNotification())
-            startLocationTraking(email)
+        if (shouldTrackLocation && email != null) { // Verifica si shouldTrackLocation es true y si email no es nulo para el while
+            startForeground(1, createNotification())    // Crea la notificación para el servicio en segundo plano
+            startLocationTraking(email) // Inicia la corrutina para la consulta de ubicación
         }
         else{
-            stopLocationTraking()
+            stopLocationTraking()   // Si shouldTrackLocation es false, detiene la corrutina y detiene el servicio en segundo plano
         }
-        return START_STICKY
+        return START_STICKY // Indica que el servicio debe reiniciarse si se detiene
     }
 
+    // Función para detener el servicio
     private fun stopLocationTraking() {
-        serviceJob?.cancel()
-        stopForeground(true)
-        stopSelf()
+        serviceJob?.cancel()    // Cancela la corrutina del servicio
+        stopForeground(true)    // Detiene el servicio en segundo plano
+        stopSelf()  // Detiene el servicio
     }
 
+    // Función para iniciar el servicio
     private fun startLocationTraking(email: String) {
-        serviceJob = serviceScope.launch {
-            Log.d(TAG, "Entrando al coroutine $email")
+        serviceJob = serviceScope.launch {  // Inicia la corrutina del servicio
+            while (isActive) {  // Mientras la corrutina esté activa
+                val result = locationService.getUserLocation(this@UbicacionGuardarService)  // Obtiene la ubicación del usuario de la LocationService
+                if (result != null) {   // Verifica si la ubicación no es nula
 
-            while (isActive) {
-                Log.d(TAG, "Entrando al while $email")
-
-                val result = locationService.getUserLocation(this@UbicacionGuardarService)
-                if (result != null) {
                     //Función cuando obtienes una nueva ubicación
                     saveLocation(email, result.latitude, result.longitude)
+
+                    //Actualizar la ubicación en la base de datos
                     db.collection("users").document("$email").update(
-                        mapOf(
+                        mapOf(  // Actualiza los datos en la base de datos en un arreglo de esta forma
                             "Latitud" to "${result?.latitude}",
                             "Longitud" to "${result?.longitude}"
                         )
                     )
                 }
-                delay(30000)
+                delay(30000)    // Espera 30 segundos antes de la próxima consulta de ubicación
             }
         }
     }
 
+    // Función para destruir el servicio
     override fun onDestroy() {
-        stopLocationTraking()
-        super.onDestroy()
+        stopLocationTraking()   // Detiene la corrutina del servicio
+        super.onDestroy()   // Llama a la función onDestroy de la superclase (Detener el servicio pues)
     }
 
+    // Función para crear la notificación para el servicio en segundo plano
     private fun createNotification(): Notification {
         val notificationChannelId = "UBICACION_GUARDAR_CHANNEL"
 
@@ -116,14 +125,17 @@ class UbicacionGuardarService : Service() {
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()
     }
+
+    // Funcion para guardar el historial de ubicación en la base de datos en un documento con la fecha de cuando se esta guardando
     fun saveLocation(email: String, latitude: Double, longitude: Double) {
         val currentDate = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(Date())
-        val locationData = hashMapOf(
+        val locationData = hashMapOf(   // Datos a guardar en la base de datos con ese formato
             "latitude" to latitude,
             "longitude" to longitude,
             "timestamp" to System.currentTimeMillis()
         )
 
+        // Conexion con la base dde datos para que se guarden
         db.collection("users").document(email).collection(currentDate)
             .add(locationData)
             .addOnSuccessListener {

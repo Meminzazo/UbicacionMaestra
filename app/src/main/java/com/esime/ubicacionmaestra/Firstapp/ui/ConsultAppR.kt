@@ -32,16 +32,20 @@ import kotlinx.coroutines.launch
 
 class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
     GoogleMap.OnMyLocationButtonClickListener, GoogleMap.OnMyLocationClickListener {
+
+        // Variables para el mapa
     private lateinit var map: GoogleMap
-    private val db = FirebaseFirestore.getInstance()
     private var currentMarker: Marker? = null
 
+        // Variables para la base de datos
+    private val db = FirebaseFirestore.getInstance()
 
+    // Definimos la variable TAG para ubicar mas facil en el Logcat
     companion object {
         const val TAG = "ConsultarUbicacionReal" // Definimos la variable TAG aqui
     }
 
-
+    // Funcion que se ejecuta al entrar a la activity
     @SuppressLint("MissingInflatedId", "WrongViewCast")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -112,11 +116,11 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                                                     val coordinates =
                                                         LatLng(LatitudDouble, LongitudDouble)
 
-                                                    currentMarker?.remove()
+                                                    currentMarker?.remove() // Eliminar el marcador actual si existe
 
                                                     // Crear un nuevo marcador y actualizar currentMarker
                                                     currentMarker = map.addMarker(
-                                                        MarkerOptions()
+                                                        MarkerOptions()     // Opciones del marcador para personalizarlo
                                                             .position(coordinates)
                                                             .title("Aprox")
                                                             .icon(
@@ -127,7 +131,7 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                                                             .flat(true)
                                                     )
 
-                                                    map.animateCamera(
+                                                    map.animateCamera(      // Animacion del mapa en el punto
                                                         CameraUpdateFactory.newLatLngZoom(
                                                             coordinates,
                                                             18f
@@ -154,14 +158,14 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                             } else {
                                 flag = false
                                 currentMarker?.remove() // Si el switch se apaga, elimina el marcador actual
-                                switchConsultar.isChecked = false
+                                switchConsultar.isChecked = false // Desmarca el switch
                             }
                         } else {
                             Toast.makeText(this, "No pertenecen al mismo grupo", Toast.LENGTH_LONG)
                                 .show()
                             flag = false
                             currentMarker?.remove() // Si el switch se apaga, elimina el marcador actual
-                            switchConsultar.isChecked = false
+                            switchConsultar.isChecked = false   // Desmarca el switch
                         }
                     }
                 }
@@ -170,21 +174,16 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                     .show()
                 flag = false
                 currentMarker?.remove() // Si el switch se apaga, elimina el marcador actual
-                switchConsultar.isChecked = false
+                switchConsultar.isChecked = false   // Desmarca el switch
             }
-
-
-
-
             with(sharedPrefs.edit()) {
                 putBoolean(MenuPrincipalActivity.SWITCH_STATE, isChecked)
                 apply()
             }
         }
-
     }
 
-
+////////////////////////////////// COSAS QUE HACEN QUE FUNCIONE EL MAPA ///////////////////////////////////////////////
     private fun createFragment() {
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
@@ -197,12 +196,15 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
         map.setOnMyLocationButtonClickListener(this)
         map.setOnMyLocationClickListener(this)
     }
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    // Verificar el estado del permiso de ubicación
     private fun isLocationPermissionGranted() = ContextCompat.checkSelfPermission(
         this,
         Manifest.permission.ACCESS_FINE_LOCATION
     ) == PackageManager.PERMISSION_GRANTED
 
+    // Solicitar si la ubicacion esta activa
     @SuppressLint("MissingPermission")
     private fun enableLocation() {
         if (!::map.isInitialized) return
@@ -213,6 +215,7 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
         }
     }
 
+    // Solicitar el permiso de ubicación
     private fun requestLocationPermission() {
         if (ActivityCompat.shouldShowRequestPermissionRationale(
                 this,
@@ -232,6 +235,7 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
         }
     }
 
+    // Respuesta del permiso de ubicación
     @SuppressLint("MissingPermission", "MissingSuperCall")
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -252,7 +256,7 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
             else -> {}
         }
     }
-
+//////////////////////////////////////////////// MAS PARA EL MAPA ////////////////////////////////////////////////////////////////
     @SuppressLint("MissingPermission")
     override fun onResumeFragments() {
         super.onResumeFragments()
@@ -266,17 +270,18 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
             ).show()
         }
     }
-
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Boton de ubicacion para saber tu ubicacion
     override fun onMyLocationButtonClick(): Boolean {
         Toast.makeText(
             this,
-            "Boton pulsado",
+            "Ubicación Aproximada",
             Toast.LENGTH_SHORT
         ).show()
         return false
     }
 
-
+    // Cuando se hace click en la ubicacion muestra las coordenadas
     override fun onMyLocationClick(p0: Location) {
         Toast.makeText(
             this,
@@ -284,6 +289,4 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
             Toast.LENGTH_SHORT
         ).show()
     }
-
-
 }

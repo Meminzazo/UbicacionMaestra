@@ -18,7 +18,11 @@ import com.google.firebase.firestore.FirebaseFirestore
 
 class AuthActivity : AppCompatActivity() {
     private lateinit var auth: FirebaseAuth   //variable de autenticacion
+
+    // Declaracion de la base de datos
     val db = FirebaseFirestore.getInstance()
+
+    // Datos de la base de datos (Formato)
     val user = hashMapOf(
         "Latitud" to "-",
         "Longitud" to "-",
@@ -27,8 +31,9 @@ class AuthActivity : AppCompatActivity() {
         "Apellido" to "-",
         "GrupoID" to "-"
     )
-    @SuppressLint("WrongViewCast")
 
+    // Funcion que se inicia al entrar a la activity
+    @SuppressLint("WrongViewCast")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -38,46 +43,38 @@ class AuthActivity : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
-        supportActionBar?.hide()
-        setup()
 
+        supportActionBar?.hide()    // oculta la barra de titulo
 
-
-
+        setup() // llama a la funcion setup que inicia la magia
     }
+
+    // Funcion que hace la magia
     private fun setup(){
-        //lateinit var auth: FirebaseAuth
-        title = "Autenticación"
-        val registrarButtom = findViewById<Button>(R.id.registrarButton)            //no me dejo agregar las id asi por que si XD
+
+        // Declaracion de lo botones de la interfaz
+        val registrarButtom = findViewById<Button>(R.id.registrarButton)
         val emailEditText = findViewById<EditText>(R.id.emailEditText)
         val passEditText = findViewById<EditText>(R.id.passEditText)
         val loginButton = findViewById<Button>(R.id.loginButton)
+
         auth = FirebaseAuth.getInstance()
 
         ///////// implementacion de la autenticacion
         auth = FirebaseAuth.getInstance()   //creamos una autenticacion
         val currentUser = auth.currentUser
-        if (currentUser != null)
-        {
+        if (currentUser != null) {
             //si el usuario esta autenticasdo, redirige a home
             val intent = Intent(this, HomeActivity::class.java)
             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK) //flag para definir la actividad actual y limpiar la anterior
-            startActivity(intent)
+            startActivity(intent)   // inicia la activity
             finish()  //finaliza la pila de actividad anterior
         }
-        else
-        {
+        else{
             //no hace nada y pasa a las demas actividades
-
-
         }
 
-
-
-
-
-
-        registrarButtom.setOnClickListener() {
+        registrarButtom.setOnClickListener() {  // al hacer click en el boton de registrar hace lo que esta dentro
             val email = emailEditText.text.toString()
             crearcolletion(email)
             if(emailEditText.text.isNotEmpty() && passEditText.text.isNotEmpty())           //comprueba si los campos son vacios
@@ -96,8 +93,8 @@ class AuthActivity : AppCompatActivity() {
                 }
             }
         }
-        // hacer lo mismo con el boton de login
 
+        // hacer lo mismo con el boton de login
        loginButton.setOnClickListener()
         {
             if(emailEditText.text.isNotEmpty() && passEditText.text.isNotEmpty())           //comprueba si los campos son vacios

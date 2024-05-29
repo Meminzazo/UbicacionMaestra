@@ -14,10 +14,12 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 
 class LocationService {
 
+    // FusedLocationProviderClient para obtener la ubicación del dispositivo en tiempo real
     private var fusedLocationProviderClient: FusedLocationProviderClient? = null
     private var locationRequest: LocationRequest? = null
     private var locationCallback: LocationCallback? = null
 
+    // Método para obtener la ubicación del dispositivo con corrutinas
     @SuppressLint("MissingPermission")
     suspend fun getUserLocation(context: Context): Location? {
         if (fusedLocationProviderClient == null) {
