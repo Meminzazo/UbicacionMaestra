@@ -37,19 +37,52 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         supportActionBar?.hide()
 
+        val bundle = intent.extras
+        val email = bundle?.getString("Email")
+
         val ButtonHistorialUbicacion = findViewById<EditText>(R.id.eTHisUbicacion)
 
         val selectDateButton = findViewById<Button>(R.id.selectDateButton)
-        selectDateButton.setOnClickListener {
-            val emailHisUbi = ButtonHistorialUbicacion.text.toString()
 
-            Log.d(TAG, "Historial de ubicaciones de: $emailHisUbi")
-            if(emailHisUbi.isEmpty()){
-                Toast.makeText(this, "Ingrese un email valido!", Toast.LENGTH_LONG).show()
+
+
+        selectDateButton.setOnClickListener {
+            if(ButtonHistorialUbicacion.text.isNotEmpty()){
+                val docRef = db.collection("users").document(email!!)
+
+                val emailHisUbi = ButtonHistorialUbicacion.text.toString()
+
+                val docRef2 = db.collection("users").document(emailHisUbi)
+
+                docRef.get().addOnSuccessListener { document ->
+
+                    val GroupIDPropio = document.getString("GrupoID")
+
+                    Log.d(TAG, "onCreate: $GroupIDPropio")
+
+                    docRef2.get().addOnSuccessListener { document2 ->
+
+                        val GroupIDHis = document2.getString("GrupoID")
+
+                        Log.d(TAG, "onCreate: $GroupIDHis")
+
+                        if(GroupIDPropio == GroupIDHis){
+
+                            Log.d(TAG, "onCreate: $emailHisUbi")
+                            Log.d(TAG, "onCreate: $email")
+
+                            showDatePickerDialog(emailHisUbi)
+                        }
+                        else{
+                            Toast.makeText(this, "El email ingresado es incorrecto o no pertenecen al mismo grupo!", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
             }
             else{
-                showDatePickerDialog(emailHisUbi)
+                Toast.makeText(this, "Ingrese un email valido!", Toast.LENGTH_LONG).show()
             }
+
         }
 
         createMapFragment()

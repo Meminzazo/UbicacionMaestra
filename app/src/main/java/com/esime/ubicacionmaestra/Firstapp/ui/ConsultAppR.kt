@@ -1,6 +1,6 @@
-    package com.esime.ubicacionmaestra.Firstapp.ui
+package com.esime.ubicacionmaestra.Firstapp.ui
 
-    import android.Manifest
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
@@ -30,213 +30,260 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-    class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
-        GoogleMap.OnMyLocationButtonClickListener, GoogleMap.OnMyLocationClickListener {
-        private lateinit var map: GoogleMap
-        private val db = FirebaseFirestore.getInstance()
-        private var currentMarker: Marker? = null
+class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
+    GoogleMap.OnMyLocationButtonClickListener, GoogleMap.OnMyLocationClickListener {
+    private lateinit var map: GoogleMap
+    private val db = FirebaseFirestore.getInstance()
+    private var currentMarker: Marker? = null
 
 
-        companion object {
-            const val TAG = "ConsultarUbicacionReal" // Definimos la variable TAG aqui
+    companion object {
+        const val TAG = "ConsultarUbicacionReal" // Definimos la variable TAG aqui
+    }
+
+
+    @SuppressLint("MissingInflatedId", "WrongViewCast")
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_consult_app_r)
+        enableEdgeToEdge()
+        supportActionBar?.hide()
+
+        // Obtener el email del intent
+        val bundle = intent.extras
+        val email = bundle?.getString("Email")
+
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
         }
 
+        // Obtener referencias a los elementos de la interfaz de usuario (botones,EditText,etc)
+        val emailUbicacion = findViewById<EditText>(R.id.emailUbicacion)
+        val switchConsultar =
+            findViewById<SwitchMaterial>(R.id.ConsultarUbicacion) as SwitchMaterial
+        val sharedPrefs =
+            getSharedPreferences(MenuPrincipalActivity.PREFS_NAME, Context.MODE_PRIVATE)
+        switchConsultar.isChecked =
+            sharedPrefs.getBoolean(MenuPrincipalActivity.SWITCH_STATE, false)
+        var emailCon = ""
 
-        @SuppressLint("MissingInflatedId", "WrongViewCast")
-        override fun onCreate(savedInstanceState: Bundle?) {
-            super.onCreate(savedInstanceState)
-            setContentView(R.layout.activity_consult_app_r)
-            enableEdgeToEdge()
-            supportActionBar?.hide()
-            ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-                val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-                v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-                insets
-            }
-            val emailUbicacion = findViewById<EditText>(R.id.emailUbicacion)
+        // El mapa
+        createFragment()
 
-            val switchConsultar = findViewById<SwitchMaterial>(R.id.ConsultarUbicacion) as SwitchMaterial
-            val sharedPrefs = getSharedPreferences(MenuPrincipalActivity.PREFS_NAME, Context.MODE_PRIVATE)
-            switchConsultar.isChecked = sharedPrefs.getBoolean(MenuPrincipalActivity.SWITCH_STATE, false)
-            var emailCon = ""
-            createFragment()
-
-            var flag = false
-
-            switchConsultar.setOnCheckedChangeListener { _, isChecked ->
+        var flag = false
 
 
-                if (isChecked && emailUbicacion.text.isNotEmpty()) {
+        // Cambio de estado del switch
+        switchConsultar.setOnCheckedChangeListener { _, isChecked ->
+            if (emailUbicacion.text.toString().isNotEmpty()) { // Verificar si el EditText no está vacío
 
-                    emailCon = emailUbicacion.text.toString()
-                    flag = isChecked
-                    lifecycleScope.launch {
-                        val docRef = db.collection("users").document(emailCon)
-                        while (flag) {
-                            docRef.get().addOnSuccessListener { document ->
-                                if (document != null) {
+                val docRef = db.collection("users").document(email!!)   // Obtener la referencia al documento del usuario en Firestore
+                val emailUbicacion2 = emailUbicacion.text.toString()    // Obtener el valor del EditText
+                val docRef2 = db.collection("users").document(emailUbicacion2)  // Obtener la referencia al documento del usuario a consultar en Firestore
 
-                                    val LatitudString = document.getString("Latitud")
-                                    val LognitudString = document.getString("Longitud")
+                docRef.get().addOnSuccessListener { document -> // Si obtiene el documento del usuario de manera exitosa
 
-                                    val LatitudDouble = LatitudString!!.toDouble()
-                                    val LongitudDouble = LognitudString!!.toDouble()
+                    val GrupoIDPropio = document.getString("GrupoID")   // Obtener el GrupoID del usuario actual
 
-                                    if (LatitudDouble != null && LongitudDouble != null) {
+                    docRef2.get().addOnSuccessListener { document1 ->    // Si obtiene el documento del usuario a consultar de manera exitosa
 
-                                        val coordinates = LatLng(LatitudDouble, LongitudDouble)
+                        val GrupoID = document1.getString("GrupoID") // Obtener el GrupoID del usuario a consultar
 
-                                        currentMarker?.remove()
+                        if (GrupoIDPropio == GrupoID) { // Verificar si pertenecen al mismo grupo
+                            if (isChecked) {    // Si el switch está activado
+                                emailCon = emailUbicacion.text.toString()   // Obtener el valor del EditText
+                                flag = isChecked
+                                lifecycleScope.launch {
+                                    val docRef = db.collection("users").document(emailCon)  // Obtener la referencia al documento del usuario a consultar en Firestore
+                                    while (flag) {
+                                        docRef.get().addOnSuccessListener { document ->
+                                            if (document != null) {
 
-                                        // Crear un nuevo marcador y actualizar currentMarker
-                                        currentMarker = map.addMarker(
-                                            MarkerOptions()
-                                                .position(coordinates)
-                                                .title("Aprox")
-                                                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
-                                                .flat(true)
-                                        )
+                                                val LatitudString = document.getString("Latitud")   // Obtener la latitud del documento del usuario a consultar
+                                                val LognitudString = document.getString("Longitud") // Obtener la longitud del documento del usuario a consultar
 
-                                        map.animateCamera(
-                                            CameraUpdateFactory.newLatLngZoom(coordinates, 18f),
-                                            5000,
-                                            null
-                                        )
+                                                val LatitudDouble = LatitudString!!.toDouble()  // Convertir las coordenadas a Double
+                                                val LongitudDouble = LognitudString!!.toDouble()    // Convertir las coordenadas a Double
 
+                                                if (LatitudDouble != null && LongitudDouble != null) {  // Verificar si las coordenadas son nulas
 
+                                                    val coordinates =
+                                                        LatLng(LatitudDouble, LongitudDouble)
 
+                                                    currentMarker?.remove()
 
-                                        Log.d(TAG, "Latitud: ${LatitudDouble}")
-                                        Log.d(TAG, "Longitud: ${LongitudDouble}")
-                                    } else {
-                                        Log.d(TAG, "No hay Latitud ni Longitud")
+                                                    // Crear un nuevo marcador y actualizar currentMarker
+                                                    currentMarker = map.addMarker(
+                                                        MarkerOptions()
+                                                            .position(coordinates)
+                                                            .title("Aprox")
+                                                            .icon(
+                                                                BitmapDescriptorFactory.defaultMarker(
+                                                                    BitmapDescriptorFactory.HUE_AZURE
+                                                                )
+                                                            )
+                                                            .flat(true)
+                                                    )
+
+                                                    map.animateCamera(
+                                                        CameraUpdateFactory.newLatLngZoom(
+                                                            coordinates,
+                                                            18f
+                                                        ),
+                                                        5000,
+                                                        null
+                                                    )
+
+                                                } else {
+                                                    Log.d(TAG, "No hay Latitud ni Longitud")
+                                                }
+                                            } else {
+                                                Log.d(TAG, "No such document")
+                                            }
+                                        }
+                                            .addOnFailureListener { excepcion ->
+                                                Log.d(TAG, "get failed with ", excepcion)
+                                            }
+
+                                        delay(20000)    // Espera 20 segundos antes de volver a consultar
                                     }
-                                } else {
-                                    Log.d(TAG, "No such document")
-                                }
-                            }
-                                .addOnFailureListener { excepcion ->
-                                    Log.d(TAG, "get failed with ", excepcion)
                                 }
 
-                            delay(20000)
+                            } else {
+                                flag = false
+                                currentMarker?.remove() // Si el switch se apaga, elimina el marcador actual
+                                switchConsultar.isChecked = false
+                            }
+                        } else {
+                            Toast.makeText(this, "No pertenecen al mismo grupo", Toast.LENGTH_LONG)
+                                .show()
+                            flag = false
+                            currentMarker?.remove() // Si el switch se apaga, elimina el marcador actual
+                            switchConsultar.isChecked = false
                         }
                     }
-
-                } else {
-                    Toast.makeText(this, "Ingresa una direccion de correo valida", Toast.LENGTH_LONG).show()
-                    flag = false
-                    currentMarker?.remove() // Si el switch se apaga, elimina el marcador actual
-                    switchConsultar.isChecked = false
                 }
-                with(sharedPrefs.edit()) {
-                    putBoolean(MenuPrincipalActivity.SWITCH_STATE, isChecked)
-                    apply()
-                }
+            } else {
+                Toast.makeText(this, "Ingresa una direccion de correo valida", Toast.LENGTH_LONG)
+                    .show()
+                flag = false
+                currentMarker?.remove() // Si el switch se apaga, elimina el marcador actual
+                switchConsultar.isChecked = false
             }
 
+
+
+
+            with(sharedPrefs.edit()) {
+                putBoolean(MenuPrincipalActivity.SWITCH_STATE, isChecked)
+                apply()
+            }
         }
 
+    }
 
-        private fun createFragment() {
-            val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
-            mapFragment.getMapAsync(this)
+
+    private fun createFragment() {
+        val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
+        mapFragment.getMapAsync(this)
+    }
+
+    override fun onMapReady(googleMap: GoogleMap) {
+        map = googleMap
+        enableLocation()
+        map.mapType = GoogleMap.MAP_TYPE_NORMAL
+        map.setOnMyLocationButtonClickListener(this)
+        map.setOnMyLocationClickListener(this)
+    }
+
+    private fun isLocationPermissionGranted() = ContextCompat.checkSelfPermission(
+        this,
+        Manifest.permission.ACCESS_FINE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
+
+    @SuppressLint("MissingPermission")
+    private fun enableLocation() {
+        if (!::map.isInitialized) return
+        if (isLocationPermissionGranted()) {
+            map.isMyLocationEnabled = true
+        } else {
+            requestLocationPermission()
         }
+    }
 
-        override fun onMapReady(googleMap: GoogleMap) {
-            map = googleMap
-            enableLocation()
-            map.mapType = GoogleMap.MAP_TYPE_NORMAL
-            map.setOnMyLocationButtonClickListener(this)
-            map.setOnMyLocationClickListener(this)
+    private fun requestLocationPermission() {
+        if (ActivityCompat.shouldShowRequestPermissionRationale(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            )
+        ) {
+            Toast.makeText(
+                this,
+                "Activa el permiso de ubicacion para poder usar esta caracteristica",
+                Toast.LENGTH_SHORT
+            ).show()
+        } else {
+            ActivityCompat.requestPermissions(
+                this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                MenuPrincipalActivity.REQUEST_CODE_LOCATION
+            )
         }
+    }
 
-        private fun isLocationPermissionGranted() = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-
-        @SuppressLint("MissingPermission")
-        private fun enableLocation() {
-            if (!::map.isInitialized) return
-            if (isLocationPermissionGranted()) {
+    @SuppressLint("MissingPermission", "MissingSuperCall")
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        when (requestCode) {
+            MenuPrincipalActivity.REQUEST_CODE_LOCATION -> if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 map.isMyLocationEnabled = true
             } else {
-                requestLocationPermission()
-            }
-        }
-
-        private fun requestLocationPermission() {
-            if (ActivityCompat.shouldShowRequestPermissionRationale(
-                    this,
-                    Manifest.permission.ACCESS_FINE_LOCATION
-                )
-            ) {
-                Toast.makeText(
-                    this,
-                    "Activa el permiso de ubicacion para poder usar esta caracteristica",
-                    Toast.LENGTH_SHORT
-                ).show()
-            } else {
-                ActivityCompat.requestPermissions(
-                    this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                    MenuPrincipalActivity.REQUEST_CODE_LOCATION
-                )
-            }
-        }
-
-        @SuppressLint("MissingPermission", "MissingSuperCall")
-        override fun onRequestPermissionsResult(
-            requestCode: Int,
-            permissions: Array<out String>,
-            grantResults: IntArray
-        ) {
-            when (requestCode) {
-                MenuPrincipalActivity.REQUEST_CODE_LOCATION -> if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    map.isMyLocationEnabled = true
-                } else {
-                    Toast.makeText(
-                        this,
-                        "Porfavor activa el permiso de ubicacion para poder usar esta caracteristica",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-
-                else -> {}
-            }
-        }
-
-        @SuppressLint("MissingPermission")
-        override fun onResumeFragments() {
-            super.onResumeFragments()
-            if (!::map.isInitialized) return
-            if (!isLocationPermissionGranted()) {
-                map.isMyLocationEnabled = false
                 Toast.makeText(
                     this,
                     "Porfavor activa el permiso de ubicacion para poder usar esta caracteristica",
                     Toast.LENGTH_SHORT
                 ).show()
             }
+
+            else -> {}
         }
-
-        override fun onMyLocationButtonClick(): Boolean {
-            Toast.makeText(
-                this,
-                "Boton pulsado",
-                Toast.LENGTH_SHORT
-            ).show()
-            return false
-        }
-
-
-        override fun onMyLocationClick(p0: Location) {
-            Toast.makeText(
-                this,
-                "Estas en ${p0.latitude}, ${p0.longitude}",
-                Toast.LENGTH_SHORT
-            ).show()
-        }
-
-
     }
+
+    @SuppressLint("MissingPermission")
+    override fun onResumeFragments() {
+        super.onResumeFragments()
+        if (!::map.isInitialized) return
+        if (!isLocationPermissionGranted()) {
+            map.isMyLocationEnabled = false
+            Toast.makeText(
+                this,
+                "Porfavor activa el permiso de ubicacion para poder usar esta caracteristica",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    override fun onMyLocationButtonClick(): Boolean {
+        Toast.makeText(
+            this,
+            "Boton pulsado",
+            Toast.LENGTH_SHORT
+        ).show()
+        return false
+    }
+
+
+    override fun onMyLocationClick(p0: Location) {
+        Toast.makeText(
+            this,
+            "Estas en ${p0.latitude}, ${p0.longitude}",
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
+
+}

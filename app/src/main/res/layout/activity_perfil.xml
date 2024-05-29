@@ -7,6 +7,64 @@
     android:layout_height="match_parent"
     tools:context=".Firstapp.ui.PerfilActivity">
 
+
+    <TextView
+        android:id="@+id/textGrupo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="324dp"
+        android:text="No perteneces a ningun grupo"
+        android:textAlignment="center"
+        android:textSize="25sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <TextView
+        android:id="@+id/IDGrupo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="ID del grupo"
+        android:textAlignment="center"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textGrupo" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="140dp"
+        android:id="@+id/SalirGrupoButton"
+        android:hint="Salir del grupo actual"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.497"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/IDGrupo" />
+
+    <Button
+        android:id="@+id/CreateGrupoButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:hint="Crear un grupo"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/JoinGrupoButton"
+        app:layout_constraintHorizontal_bias="0.507"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/IDGrupo"
+        app:layout_constraintVertical_bias="0.217" />
+
+    <Button
+        android:id="@+id/JoinGrupoButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="40dp"
+        android:hint="Entrar a un grupo"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/IDGrupo"
+        app:layout_constraintVertical_bias="0.217" />
+
     <TextView
         android:id="@+id/imgPerfil"
         android:layout_width="0dp"

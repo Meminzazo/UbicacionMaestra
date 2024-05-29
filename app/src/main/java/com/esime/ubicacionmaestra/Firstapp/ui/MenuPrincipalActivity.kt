@@ -39,7 +39,9 @@ class MenuPrincipalActivity : AppCompatActivity() {
        val consultButton = findViewById<Button>(R.id.consultButton)
         consultButton.setOnClickListener{
             Log.d("MenuPrincipalActivity", "to ConsultAppR Email: $email")
-            val intent1 = Intent (this, ConsultAppR::class.java)
+            val intent1 = Intent (this, ConsultAppR::class.java).apply {
+                putExtra("Email", email)
+            }
             startActivity(intent1)
         }
        val saveUbi = findViewById<Button>(R.id.saveUbi)
