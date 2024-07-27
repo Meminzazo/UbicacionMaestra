@@ -45,7 +45,7 @@
             android:name=".Firstapp.ui.MenuPrincipalActivity"
             android:exported="false" />
         <activity
-            android:name=".Firstapp.ui.HomeActivity"
+            android:name=".Firstapp.ui.homeActivity.HomeActivity"
             android:exported="false" />
         <activity
             android:name=".Firstapp.ui.AuthActivity"

@@ -1,14 +1,21 @@
-package com.esime.ubicacionmaestra.Firstapp.ui
+package com.esime.ubicacionmaestra.Firstapp.ui.homeActivity
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.TextView
+import androidx.activity.addCallback
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.esime.ubicacionmaestra.Firstapp.ui.AuthActivity
+import com.esime.ubicacionmaestra.Firstapp.ui.MenuPrincipalActivity
+import com.esime.ubicacionmaestra.Firstapp.ui.PerfilActivity
 import com.esime.ubicacionmaestra.R
+import com.esime.ubicacionmaestra.databinding.ActivityHomeBinding
 import com.google.firebase.auth.FirebaseAuth
 
 enum class ProviderType() {
@@ -16,7 +23,10 @@ enum class ProviderType() {
 }
 class HomeActivity : AppCompatActivity() {
 
+    private lateinit var binding: ActivityHomeBinding
+
     private lateinit var auth: FirebaseAuth
+    private val viewmodel : HomeViewModel by viewModels()
 
     // Definimos la variable TAG para el Logcat
     companion object {
@@ -27,12 +37,10 @@ class HomeActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContentView(R.layout.activity_home)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
+        binding = ActivityHomeBinding.inflate(layoutInflater)
+        val view = binding.root
+        setContentView(view)
+
         // Ocultar la barra de título
         supportActionBar?.hide()
 
@@ -63,6 +71,22 @@ class HomeActivity : AppCompatActivity() {
         val editor = sharedPreferences.edit()
         editor.putString("emailPersistente", email)
         editor.apply()
+
+        binding.emailTextView.setOnClickListener {
+            viewmodel.prueba()
+        }
+
+        viewmodel.variableObservada.observe(this) { textoDevuelto ->
+            binding.providerTextView.text = textoDevuelto
+            Log.d("HomeViewModel", "prueba")
+        }
+
+
+
+        // on back pressed (ir pa tras )
+        onBackPressedDispatcher.addCallback {
+        }
+
 
         // Boton de perfil declaracion
         val perfilButton = findViewById<Button>(R.id.perfilButton)
@@ -95,4 +119,5 @@ class HomeActivity : AppCompatActivity() {
             startActivity(intent)   // inicia la actividad
         }
     }
+
 }

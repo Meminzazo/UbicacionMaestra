@@ -37,7 +37,7 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
     private lateinit var map: GoogleMap
     private var currentMarker: Marker? = null
 
-        // Variables para la base de datos
+    // Variables para la base de datos
     private val db = FirebaseFirestore.getInstance()
 
     // Definimos la variable TAG para ubicar mas facil en el Logcat
