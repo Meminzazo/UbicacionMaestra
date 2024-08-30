@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Button
 import android.widget.EditText
+import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -92,6 +93,9 @@ class AuthActivity : AppCompatActivity() {
                     }
                 }
             }
+
+               // Toast.makeText(this, "Porfavor Ingrese Datos", Toast.LENGTH_SHORT).show()    // mensaje en caso de estar vacio
+
         }
 
         // hacer lo mismo con el boton de login

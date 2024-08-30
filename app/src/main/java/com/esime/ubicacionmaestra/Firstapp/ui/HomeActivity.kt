@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
+import androidx.activity.addCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -63,6 +64,11 @@ class HomeActivity : AppCompatActivity() {
         val editor = sharedPreferences.edit()
         editor.putString("emailPersistente", email)
         editor.apply()
+
+
+        //on back pressed "ir para atras"
+        onBackPressedDispatcher.addCallback{
+        }
 
         // Boton de perfil declaracion
         val perfilButton = findViewById<Button>(R.id.perfilButton)
