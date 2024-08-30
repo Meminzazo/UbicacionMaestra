@@ -5,25 +5,74 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
+import android.widget.ImageView
+import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.esime.ubicacionmaestra.R
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import com.google.gson.annotations.SerializedName
+import com.squareup.picasso.Picasso
+import retrofit2.http.GET
+import retrofit2.http.Query
+
+interface WeatherService {
+    @GET("data/2.5/weather")
+    fun getCurrentWeather(
+        @Query("lat") latitude: Double,
+        @Query("lon") longitude: Double,
+        @Query("appid") apiKey: String,
+        @Query("units") units: String = "metric" // Usar unidades métricas
+    ): Call<WeatherResponse>
+}
+
+data class WeatherResponse(
+    @SerializedName("main") val main: Main,
+    @SerializedName("weather") val weather: List<Weather>,
+    @SerializedName("name") val name: String
+)
+
+data class Main(
+    @SerializedName("temp") val temp: Float,
+    @SerializedName("humidity") val humidity: Int
+)
+
+data class Weather(
+    @SerializedName("description") val description: String,
+    @SerializedName("icon") val icon: String
+)
+
+object RetrofitInstance {
+    private const val BASE_URL = "https://api.openweathermap.org/"
+
+    val retrofit: Retrofit = Retrofit.Builder()
+        .baseUrl(BASE_URL)
+        .addConverterFactory(GsonConverterFactory.create())
+        .build()
+
+    val weatherService: WeatherService = retrofit.create(WeatherService::class.java)
+}
 
 
 class MenuPrincipalActivity : AppCompatActivity() {
 
-    // TAG para el log
     val TAG = "MenuPrincipalActivity"
 
-    // NAda relevante
     companion object {
         const val REQUEST_CODE_LOCATION = 0
         const val PREFS_NAME = "SwitchPrefs"
         const val SWITCH_STATE = "switch_state"
     }
-    // Funcion cuando inicia la activity
+
+    // Replace with your OpenWeather API key
+    private val apiKey = "e7fddd98d3cd75d27b33a6ba774fe5ed"
+
     @SuppressLint("MissingInflatedId", "LongLogTag")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,27 +96,73 @@ class MenuPrincipalActivity : AppCompatActivity() {
         val saveUbi = findViewById<Button>(R.id.saveUbi)
         val viewLocationsButton = findViewById<Button>(R.id.viewsLocationsButton)
 
-        consultButton.setOnClickListener{   // Cuando se hace click en el boton entra a la ConsultAppR
+        consultButton.setOnClickListener {
             Log.d("MenuPrincipalActivity", "to ConsultAppR Email: $email")
-            val intent1 = Intent (this, ConsultAppR::class.java).apply {
+            val intent1 = Intent(this, ConsultAppR::class.java).apply {
                 putExtra("Email", email)    // Pasamos el email al intent
             }
             startActivity(intent1)  // Lanzamos la activity
         }
 
-        saveUbi.setOnClickListener{ // Cuando se hace click en el boton entra a la SaveUbicacionReal
+        saveUbi.setOnClickListener {
             Log.d("MenuPrincipalActivity", "to SaveUbicacionReal Email: $email")
-            val intent = Intent (this, SaveUbicacionReal::class.java).apply{
+            val intent = Intent(this, SaveUbicacionReal::class.java).apply {
                 putExtra("Email", email)    // Pasamos el email al intent
             }
             startActivity(intent)   // Lanzamos la activity
         }
 
-        viewLocationsButton.setOnClickListener {    // Cuando se hace click en el boton entra a la ViewLocations
-            val intent = Intent(this, ViewLocationsActivity::class.java).apply{
+        viewLocationsButton.setOnClickListener {
+            val intent = Intent(this, ViewLocationsActivity::class.java).apply {
                 putExtra("Email", email)    // Pasamos el email al intent
             }
             startActivity(intent)   // Lanzamos la activity
         }
+
+        // Aquí se llama a la función para obtener el clima
+        fetchWeather()
+    }
+
+    // Función para obtener la ubicación actual (dummy para ejemplificar)
+    private fun getCurrentLocation(): Pair<Double, Double> {
+        // Reemplaza esto con la lógica para obtener la ubicación real
+        val latitude = 19.4326 // Por ejemplo, CDMX
+        val longitude = -99.1332
+        return Pair(latitude, longitude)
+    }
+
+    // Función para obtener y mostrar la información del clima
+    private fun fetchWeather() {
+        val (latitude, longitude) = getCurrentLocation()
+        val weatherService = RetrofitInstance.weatherService
+
+        weatherService.getCurrentWeather(latitude, longitude, apiKey).enqueue(object : Callback<WeatherResponse> {
+            override fun onResponse(call: Call<WeatherResponse>, response: Response<WeatherResponse>) {
+                if (response.isSuccessful) {
+                    val weatherResponse = response.body()
+                    weatherResponse?.let {
+                        val temperature = it.main.temp
+                        val description = it.weather[0].description
+                        val iconCode = it.weather[0].icon
+                        val city = it.name
+
+                        // Actualizar el TextView con la información del clima
+                        val weatherTextView: TextView = findViewById(R.id.textViewWeather)
+                        weatherTextView.text = "Clima en $city: $temperature°C"
+
+                        // Actualizar el ImageView con el icono
+                        val weatherIcon: ImageView = findViewById(R.id.imageViewWeatherIcon)
+                        val iconUrl = "https://openweathermap.org/img/wn/$iconCode@2x.png"
+                        Picasso.get().load(iconUrl).into(weatherIcon)
+                    }
+                } else {
+                    Log.e(TAG, "Error en la respuesta: ${response.message()}")
+                }
+            }
+
+            override fun onFailure(call: Call<WeatherResponse>, t: Throwable) {
+                Log.e(TAG, "Error en la llamada: ${t.message}")
+            }
+        })
     }
 }

@@ -7,6 +7,35 @@
     android:layout_height="match_parent"
     tools:context=".Firstapp.ui.MenuPrincipalActivity">
 
+    <!-- ImageView para mostrar el icono del clima -->
+
+    <!-- TextView para mostrar el clima -->
+
+    <ImageView
+        android:id="@+id/imageViewWeatherIcon"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        app:layout_constraintBottom_toTopOf="@+id/saveUbi"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.532"
+        app:layout_constraintStart_toEndOf="@+id/textViewWeather"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/textViewWeather"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="44dp"
+        android:layout_marginBottom="16dp"
+        android:text="Cargando clima..."
+        android:textColor="@android:color/black"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toTopOf="@+id/saveUbi"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.697" />
+
     <Button
         android:id="@+id/consultButton"
         android:layout_width="wrap_content"
@@ -20,7 +49,7 @@
         android:id="@+id/saveUbi"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="68dp"
+        android:layout_marginTop="116dp"
         android:text="Ubicacion en tiempo real"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

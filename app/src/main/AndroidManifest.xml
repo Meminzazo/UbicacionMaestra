@@ -35,6 +35,11 @@
             android:foregroundServiceType="location"
             tools:ignore="ForegroundServicePermission" />
 
+        <receiver
+            android:name=".Firstapp.ui.GeofenceBroadcastReceiver"
+            android:exported="false"
+            />
+
         <activity
             android:name=".Firstapp.ui.ConsultAppR"
             android:exported="false" />
