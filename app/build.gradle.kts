@@ -10,6 +10,7 @@ android {
 
     packagingOptions {
         exclude ("androidsupportmultidexversion.txt")
+
     }
 
 

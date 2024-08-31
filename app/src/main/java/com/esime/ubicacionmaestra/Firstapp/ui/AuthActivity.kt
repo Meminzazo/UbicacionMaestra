@@ -17,6 +17,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
 
+
 class AuthActivity : AppCompatActivity() {
     private lateinit var auth: FirebaseAuth   //variable de autenticacion
 
@@ -75,32 +76,47 @@ class AuthActivity : AppCompatActivity() {
             //no hace nada y pasa a las demas actividades
         }
 
+
+        // ACCIONES AL PULSAR LE BOTON DE REGISTRARSE
         registrarButtom.setOnClickListener() {  // al hacer click en el boton de registrar hace lo que esta dentro
             val email = emailEditText.text.toString()
-            crearcolletion(email)
-            if(emailEditText.text.isNotEmpty() && passEditText.text.isNotEmpty())           //comprueba si los campos son vacios
-            {
-                FirebaseAuth.getInstance().createUserWithEmailAndPassword(emailEditText.text.toString(),        //servicio de firebase autentication
-                    passEditText.text.toString()).addOnCompleteListener()    //notifica si el registro a sido satisfactorio
+                if (emailEditText.text.isNotEmpty() && passEditText.text.isNotEmpty())           //comprueba si los campos son vacios
                 {
-                    if (it.isSuccessful) //si la operacion se completa correctamente ...
+                    crearcolletion(email)  // solo crea a base de datos si los edit text no estan vacios
+                    FirebaseAuth.getInstance().createUserWithEmailAndPassword(
+                        emailEditText.text.toString(),        //servicio de firebase autentication
+                        passEditText.text.toString()
+                    ).addOnCompleteListener()    //notifica si el registro a sido satisfactorio
                     {
-                        showHome(it.result?.user?.email?:"", ProviderType.BASIC)   //en caso de no existir email manda un vacio, si no da error
-                    }
-                    else  //alerta de que ha pasado algo si no ...
-                    {
-                        showAlert()
+                        if (it.isSuccessful) //si la operacion se completa correctamente ...
+                        {
+                            showHome(
+                                it.result?.user?.email ?: "",
+                                ProviderType.BASIC
+                            )   //en caso de no existir email manda un vacio, si no da error
+                        } else  //alerta de que ha pasado algo si no ...
+                        {
+                            showAlert()
+                        }
                     }
                 }
-            }
+            // en caso de que los edit text esten vacios agrega esta alerta
 
-               // Toast.makeText(this, "Porfavor Ingrese Datos", Toast.LENGTH_SHORT).show()    // mensaje en caso de estar vacio
-
+            else {
+                    Toast.makeText(this, "Porfavor Ingrese Datos", Toast.LENGTH_SHORT)
+                        .show()    // mensaje en caso de estar vacio
+                }
         }
 
-        // hacer lo mismo con el boton de login
+
+
+
+
+        // ACCIONES AL PULSAR LE BOTON DE INGRESAR
        loginButton.setOnClickListener()
         {
+
+
             if(emailEditText.text.isNotEmpty() && passEditText.text.isNotEmpty())           //comprueba si los campos son vacios
             {
                 FirebaseAuth.getInstance().signInWithEmailAndPassword(emailEditText.text.toString(),        //ahora ingresa
@@ -126,6 +142,10 @@ class AuthActivity : AppCompatActivity() {
 
     }
 
+
+
+
+    // FUNCIONES AUXIALIARES EN CASO DE CUALQUIER ACCION ANTERIOR
     private fun showAlert()
     {
         val builder = AlertDialog.Builder(this)

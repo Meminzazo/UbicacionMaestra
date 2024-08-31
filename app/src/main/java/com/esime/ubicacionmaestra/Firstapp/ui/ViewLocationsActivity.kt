@@ -64,7 +64,7 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
 
                         val GroupIDHis = document2.getString("GrupoID") // Guarda el GroupID del usuario que se esta buscando
 
-                        if(GroupIDPropio == GroupIDHis){    // Comprueba que esten en el mismo grupo
+                        if(GroupIDPropio !="-" && GroupIDPropio == GroupIDHis){    // Comprueba que esten en el mismo grupo
                             showDatePickerDialog(emailHisUbi)   // Muestra el Selector del dia
                         }
                         else{
