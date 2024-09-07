@@ -12,6 +12,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.esime.ubicacionmaestra.R
+import com.google.firebase.Firebase
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
+import com.google.firebase.database.database
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -30,6 +37,10 @@ interface WeatherService {
         @Query("appid") apiKey: String,
         @Query("units") units: String = "metric" // Usar unidades métricas
     ): Call<WeatherResponse>
+}
+data class User(val username: String? = null, val email: String? = null) {
+    // Null default values create a no-argument default constructor, which is needed
+    // for deserialization from a DataSnapshot.
 }
 
 data class WeatherResponse(
@@ -59,6 +70,8 @@ object RetrofitInstance {
     val weatherService: WeatherService = retrofit.create(WeatherService::class.java)
 }
 
+private lateinit var database: DatabaseReference
+// ...
 
 class MenuPrincipalActivity : AppCompatActivity() {
 
@@ -95,6 +108,10 @@ class MenuPrincipalActivity : AppCompatActivity() {
         val consultButton = findViewById<Button>(R.id.consultButton)
         val saveUbi = findViewById<Button>(R.id.saveUbi)
         val viewLocationsButton = findViewById<Button>(R.id.viewsLocationsButton)
+
+        database = Firebase.database.reference
+
+        detectDatabaseChanges("hmaury10@gmailcom")
 
         consultButton.setOnClickListener {
             Log.d("MenuPrincipalActivity", "to ConsultAppR Email: $email")
@@ -164,5 +181,38 @@ class MenuPrincipalActivity : AppCompatActivity() {
                 Log.e(TAG, "Error en la llamada: ${t.message}")
             }
         })
+    }
+    // Función para detectar cambios en la base de datos en tiempo real
+    fun detectDatabaseChanges(userId: String) {
+        val database = FirebaseDatabase.getInstance().reference
+
+        // Referencia al nodo "users/userId"
+        val userReference = database.child("users").child(userId)
+
+        // Listener para detectar cambios en el nodo
+        val postListener = object : ValueEventListener {
+            override fun onDataChange(dataSnapshot: DataSnapshot) {
+                // Verificar si el snapshot contiene datos
+                if (dataSnapshot.exists()) {
+                    // Obtener el objeto usuario desde la base de datos
+                    val user = dataSnapshot.getValue(User::class.java)
+                    user?.let {
+
+                        Log.d(TAG, "Nombre: ${it.username}, Email: ${it.email}")
+                        // Aquí puedes agregar más lógica para manejar los cambios, como notificaciones o actualizaciones en la UI
+                    }
+                } else {
+                    Log.d(TAG, "No se encontraron datos.")
+                }
+            }
+
+            override fun onCancelled(databaseError: DatabaseError) {
+                // Manejar el error en caso de fallo en la lectura
+                Log.w(TAG, "Error al cargar datos.", databaseError.toException())
+            }
+        }
+
+        // Agregar el listener a la referencia
+        userReference.addValueEventListener(postListener)
     }
 }

@@ -34,7 +34,17 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.material.switchmaterial.SwitchMaterial
+import com.google.firebase.Firebase
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.IgnoreExtraProperties
+import com.google.firebase.database.ValueEventListener
+import com.google.firebase.database.database
+import com.google.firebase.database.getValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.MetadataChanges
+import com.google.firebase.firestore.auth.User
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -45,8 +55,16 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
     private lateinit var map: GoogleMap
     private var currentMarker: Marker? = null
 
+    @IgnoreExtraProperties
+    data class User(
+                val username: String? = null,
+                val email: String? = null) {
+    }
+
     // Variables para la base de datos
     private val db = FirebaseFirestore.getInstance()
+
+    private lateinit var database: DatabaseReference
 
     // Definimos la variable TAG para ubicar mas facil en el Logcat
     companion object {
@@ -67,6 +85,7 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
         enableEdgeToEdge()
         supportActionBar?.hide()
 
+
         // Obtener el email del intent
         val bundle = intent.extras
         val email = bundle?.getString("Email")
@@ -76,6 +95,8 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
+
+        writeNewUser("hmaury10@gmailcom", "2", "5090")
 
         // Obtener referencias a los elementos de la interfaz de usuario (botones,EditText,etc)
         val emailUbicacion = findViewById<EditText>(R.id.emailUbicacion)
@@ -94,7 +115,7 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
 
         geofencingClient = LocationServices.getGeofencingClient(this)
 
-        addGeofence()
+        //addGeofence()
 
         // Cambio de estado del switch
         switchConsultar.setOnCheckedChangeListener { _, isChecked ->
@@ -130,6 +151,8 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                                             val docRef = db.collection("users")
                                                 .document(emailCon)  // Obtener la referencia al documento del usuario a consultar en Firestore
                                             while (flag) {
+
+
                                                 docRef.get().addOnSuccessListener { document ->
                                                     if (document != null) {
 
@@ -220,6 +243,15 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                 apply()
             }
         }
+    }
+
+    fun writeNewUser(userId: String, name: String, email: String) {
+
+        database = Firebase.database.reference
+
+        val user = User(name, email)
+
+        database.child("users").child(userId).setValue(user)
     }
 
     @SuppressLint("MissingPermission")

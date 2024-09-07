@@ -74,7 +74,7 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:33.0.0"))
     implementation("com.google.firebase:firebase-auth-ktx:23.0.0")
     implementation("com.google.firebase:firebase-analytics")
-    // Maps SDK for Android
+    // Maps SDK for Androi
     implementation("com.google.android.gms:play-services-maps:18.2.0")
 
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
