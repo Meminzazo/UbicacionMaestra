@@ -72,6 +72,7 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
     }
 
     private lateinit var geofencingClient: GeofencingClient
+
     private val geoFenceId = "Pruebas"
     private val geoFenceCenterLat = 19.4976
     private val geoFenceCenterLng = -99.1356
@@ -96,7 +97,7 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
             insets
         }
 
-        writeNewUser("hmaury10@gmailcom", "2", "5090")
+        //writeNewUser("hmaury10@gmailcom", "2", "5090")
 
         // Obtener referencias a los elementos de la interfaz de usuario (botones,EditText,etc)
         val emailUbicacion = findViewById<EditText>(R.id.emailUbicacion)
@@ -244,65 +245,6 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
             }
         }
     }
-
-    fun writeNewUser(userId: String, name: String, email: String) {
-
-        database = Firebase.database.reference
-
-        val user = User(name, email)
-
-        database.child("users").child(userId).setValue(user)
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun addGeofence() {
-        val geofence = Geofence.Builder()
-            .setRequestId(geoFenceId)
-            .setCircularRegion(
-                geoFenceCenterLat,
-                geoFenceCenterLng,
-                geoFenceRadius.toFloat()
-            )
-            .setExpirationDuration(Geofence.NEVER_EXPIRE)
-            .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER or Geofence.GEOFENCE_TRANSITION_EXIT)
-            .build()
-
-        val geofencingRequest = GeofencingRequest.Builder()
-            .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
-            .addGeofence(geofence)
-            .build()
-
-        Log.d(TAG, "Geofence in process to add")
-
-        val geofencePendingIntent = PendingIntent.getBroadcast(
-            this,
-            0,
-            Intent(this, GeofenceBroadcastReceiver::class.java),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
-        )
-
-        geofencingClient.addGeofences(geofencingRequest, geofencePendingIntent)
-            .addOnSuccessListener {
-                Toast.makeText(this, "Geovalla añadida correctamente", Toast.LENGTH_SHORT).show()
-            }
-            .addOnFailureListener { e ->
-                val errorMessage = when (e) {
-                    is ApiException -> {
-                        when (e.statusCode) {
-                            GeofenceStatusCodes.GEOFENCE_NOT_AVAILABLE -> "Geofence no disponible"
-                            GeofenceStatusCodes.GEOFENCE_TOO_MANY_GEOFENCES -> "Demasiadas geovallas"
-                            GeofenceStatusCodes.GEOFENCE_TOO_MANY_PENDING_INTENTS -> "Demasiados PendingIntents"
-                            else -> "Error desconocido: ${e.statusCode}"
-                        }
-                    }
-                    else -> "Error desconocido: ${e.localizedMessage}"
-                }
-                Toast.makeText(this, "Error añadiendo geovalla: $errorMessage", Toast.LENGTH_LONG).show()
-                Log.e("Geofence", errorMessage, e)
-            }
-    }
-
-
 
     ////////////////////////////////// COSAS QUE HACEN QUE FUNCIONE EL MAPA ///////////////////////////////////////////////
     private fun createFragment() {

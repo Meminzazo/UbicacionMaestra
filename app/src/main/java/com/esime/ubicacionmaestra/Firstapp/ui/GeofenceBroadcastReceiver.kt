@@ -16,30 +16,28 @@ import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.database
 
 class GeofenceBroadcastReceiver : BroadcastReceiver() {
+
     companion object {
         const val TAG = "GeofenceReceiver"
+        const val EXTRA_GEOFENCE_NAME = "Nombre" // Asegúrate de usar la misma clave
     }
 
     data class User(
-        val goevallaname: String? = null,
-        val latidudgeovalla: String? = null,
-        val longitudgeovalla: String? = null,
-        val alertageovalla: String? = null
+        val name: String? = null,
+        val latitud: String? = null,
+        val longitud: String? = null,
+        val radius: String? = null,
+        val transitionTypes: String? = "null"
     )
 
     private lateinit var database: DatabaseReference
 
-    private lateinit var geofencingClient: GeofencingClient
-    private val geoFenceId = "Pruebas"
-    private val geoFenceCenterLat = 19.4976
-    private val geoFenceCenterLng = -99.1356
-    private val geoFenceRadius = 100.0
-
     override fun onReceive(context: Context, intent: Intent) {
-        val geofencingEvent = GeofencingEvent.fromIntent(intent)
 
-        //geofencingClient = LocationServices.getGeofencingClient(this)
-        //writeNewUser("hmaury10@gmailcom", "19.499428247356565", "-99.13468323947379","true")
+        database = Firebase.database.reference
+
+
+        val geofencingEvent = GeofencingEvent.fromIntent(intent)
 
         Log.e(TAG, "Entrando a onReceive")
 
@@ -49,28 +47,38 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
             return
         }
 
+        val name = intent.getStringExtra(EXTRA_GEOFENCE_NAME)
+
+        Log.e(TAG, "Nombre de geovalla recibido: $name")
+
+
         // Obtener el tipo de transición
         val geofenceTransition = geofencingEvent.geofenceTransition
-        if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER) {
 
+        if (name != null) {
+            if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER) {
 
+                val update = mapOf("transitionTypes" to "true")
+                database.child("users").child("hmaury10").child("Geovallas").child(name).updateChildren(update)
+                Log.i(TAG, "Entrando en la geovalla: $name")
+                Toast.makeText(context, "Entrando en la geovalla: $name", Toast.LENGTH_SHORT).show()
 
-            Log.i(TAG, "Entrando en la geovalla")
-            Toast.makeText(context, "Entrando en la geovalla", Toast.LENGTH_SHORT).show()
-        } else if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_EXIT) {
-            Log.i(TAG, "Saliendo de la geovalla")
-            Toast.makeText(context, "Saliendo de la geovalla", Toast.LENGTH_SHORT).show()
+            } else if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_EXIT) {
+
+                val update = mapOf("transitionTypes" to "false")
+                database.child("users").child("hmaury10").child("Geovallas").child(name).updateChildren(update)
+                Log.i(TAG, "Saliendo de la geovalla: $name")
+                Toast.makeText(context, "Saliendo de la geovalla: $name", Toast.LENGTH_SHORT).show()
+
+            } else {
+
+                Log.e(TAG, "Transición no válida")
+
+            }
         } else {
-            Log.e(TAG, "Transición no válida")
+
+            Log.e(TAG, "Nombre de geovalla no encontrado en el Intent")
+
         }
-    }
-
-    fun writeNewUser(email: String, geofenceName: String, latitudgeofence: String, longitudgeofence: String, alertageofence: String) {
-
-        database = Firebase.database.reference
-
-        val user = User(latitudgeofence, longitudgeofence, alertageofence)
-
-        database.child("users").child(email).child(geofenceName).setValue(user)
     }
 }

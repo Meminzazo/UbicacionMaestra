@@ -3,6 +3,7 @@ package com.esime.ubicacionmaestra.Firstapp.ui
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -17,15 +18,17 @@ import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
-import android.widget.PopupWindow
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.esime.ubicacionmaestra.Firstapp.ui.ConsultAppR.User
 import com.esime.ubicacionmaestra.R
+import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.location.Geofence
+import com.google.android.gms.location.GeofenceStatusCodes
+import com.google.android.gms.location.GeofencingClient
+import com.google.android.gms.location.GeofencingRequest
+import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
@@ -68,9 +71,11 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         const val BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE = 1002
         const val NOTIFICATION_PERMISSION_REQUEST_CODE = 1003
     }
-    private lateinit var popupWindow: PopupWindow
 
     private lateinit var database: DatabaseReference
+
+    private lateinit var geofencingClient: GeofencingClient
+
 
     @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -79,6 +84,8 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
 
         requestNotificationPermission()
         requestLocationPermission()
+
+        geofencingClient = LocationServices.getGeofencingClient(this)
 
         supportActionBar?.hide()
         val bundle = intent.extras
@@ -122,6 +129,58 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         }
     }
 
+    @SuppressLint("MissingPermission")
+    private fun addGeofence(nombre: String?, latitud: Double?, longitud: Double?, radio: Float?) {
+
+            val geofence = Geofence.Builder()
+                .setRequestId(nombre!!)
+                .setCircularRegion(
+                    latitud!!,
+                    longitud!!,
+                    radio!!
+                )
+                .setExpirationDuration(Geofence.NEVER_EXPIRE)
+                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER or Geofence.GEOFENCE_TRANSITION_EXIT)
+                .build()
+
+            val geofencingRequest = GeofencingRequest.Builder()
+                .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
+                .addGeofence(geofence)
+                .build()
+
+            Log.d(ConsultAppR.TAG, "Geofence in process to add")
+
+            val intent = Intent(this, GeofenceBroadcastReceiver::class.java).apply {
+                putExtra("Nombre", nombre) // Añade el nombre al Intent
+            }
+
+            val geofencePendingIntent = PendingIntent.getBroadcast(
+                this,
+                nombre.hashCode(),
+                intent,
+               PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+            )
+            geofencingClient.addGeofences(geofencingRequest, geofencePendingIntent)
+                .addOnSuccessListener {
+                    Toast.makeText(this, "Geovalla añadida correctamente", Toast.LENGTH_SHORT).show()
+                }
+                .addOnFailureListener { e ->
+                    val errorMessage = when (e) {
+                        is ApiException -> {
+                            when (e.statusCode) {
+                                GeofenceStatusCodes.GEOFENCE_NOT_AVAILABLE -> "Geofence no disponible"
+                                GeofenceStatusCodes.GEOFENCE_TOO_MANY_GEOFENCES -> "Demasiadas geovallas"
+                                GeofenceStatusCodes.GEOFENCE_TOO_MANY_PENDING_INTENTS -> "Demasiados PendingIntents"
+                                else -> "Error desconocido: ${e.statusCode}"
+                            }
+                        }
+                        else -> "Error desconocido: ${e.localizedMessage}"
+                    }
+                    Toast.makeText(this, "Error añadiendo geovalla: $errorMessage", Toast.LENGTH_LONG).show()
+                    Log.e("Geofence", errorMessage, e)
+                }
+    }
+
     private fun consultaGeofence() {
 
         val mDatabase = Firebase.database.reference
@@ -135,6 +194,7 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
 
                 Log.i(TAG, "Geovalla: $nombre, Latitud: $latitud, Longitud: $longitud, Radio: $radio")
 
+                addGeofence(nombre, latitud, longitud, radio)
                 mostrarGeovalla(nombre, latitud, longitud, radio)
             }
         }.addOnFailureListener {
@@ -240,7 +300,6 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         container.addView(radioField)
     }
 
-    // Función para guardar los datos en la base de datos
     private fun guardarGeofencesEnBaseDeDatos(geofences: List<GeofenceData>) {
         // Aquí puedes agregar tu lógica para guardar en Firebase u otro almacenamiento
         geofences.forEach { geofence ->
@@ -255,7 +314,6 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         database = Firebase.database.reference
 
         val user = User(name, latitud, longitud, radius)
-        //val email = emailubi
 
         database.child("users").child("hmaury10").child("Geovallas").child(name).setValue(user)
     }
