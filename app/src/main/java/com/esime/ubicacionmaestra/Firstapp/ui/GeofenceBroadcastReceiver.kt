@@ -7,7 +7,6 @@ import android.util.Log
 import com.google.android.gms.location.Geofence
 import com.google.android.gms.location.GeofencingEvent
 import android.widget.Toast
-import com.esime.ubicacionmaestra.Firstapp.ui.ConsultAppR.User
 import com.google.android.gms.location.GeofenceStatusCodes
 import com.google.android.gms.location.GeofencingClient
 import com.google.android.gms.location.LocationServices

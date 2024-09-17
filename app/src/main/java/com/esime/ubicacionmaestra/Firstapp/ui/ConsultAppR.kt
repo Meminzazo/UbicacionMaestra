@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.location.Location
 import android.os.Bundle
 import android.util.Log
@@ -18,6 +19,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
+import com.esime.ubicacionmaestra.Firstapp.ui.SaveUbicacionReal.Companion
 import com.esime.ubicacionmaestra.R
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.location.Geofence
@@ -30,6 +32,7 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.CircleOptions
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
@@ -38,6 +41,7 @@ import com.google.firebase.Firebase
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.IgnoreExtraProperties
 import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.database
@@ -55,12 +59,6 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
     private lateinit var map: GoogleMap
     private var currentMarker: Marker? = null
 
-    @IgnoreExtraProperties
-    data class User(
-                val username: String? = null,
-                val email: String? = null) {
-    }
-
     // Variables para la base de datos
     private val db = FirebaseFirestore.getInstance()
 
@@ -73,10 +71,6 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
 
     private lateinit var geofencingClient: GeofencingClient
 
-    private val geoFenceId = "Pruebas"
-    private val geoFenceCenterLat = 19.4976
-    private val geoFenceCenterLng = -99.1356
-    private val geoFenceRadius = 100.0
 
     // Funcion que se ejecuta al entrar a la activity
     @SuppressLint("MissingInflatedId", "WrongViewCast")
@@ -97,8 +91,6 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
             insets
         }
 
-        //writeNewUser("hmaury10@gmailcom", "2", "5090")
-
         // Obtener referencias a los elementos de la interfaz de usuario (botones,EditText,etc)
         val emailUbicacion = findViewById<EditText>(R.id.emailUbicacion)
         val switchConsultar =
@@ -115,8 +107,40 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
         var flag = false
 
         geofencingClient = LocationServices.getGeofencingClient(this)
+        database = FirebaseDatabase.getInstance().reference
+        // Configurar el listener para la geovalla
+        val postReference = database.child("users").child("hmaury10").child("Geovallas")
+        val postListener = object : ValueEventListener {
+            override fun onDataChange(dataSnapshot: DataSnapshot) {
+                // Iterar sobre los datos de geovalla
+                for (geovallaSnapshot in dataSnapshot.children) {
+                    val nombre = geovallaSnapshot.child("name").getValue(String::class.java)
+                    val latitud = geovallaSnapshot.child("latitud").getValue(String::class.java)?.toDoubleOrNull()
+                    val longitud = geovallaSnapshot.child("longitud").getValue(String::class.java)?.toDoubleOrNull()
+                    val radio = geovallaSnapshot.child("radius").getValue(String::class.java)?.toFloatOrNull()
+                    val transitionType = geovallaSnapshot.child("transitionTypes").getValue(String::class.java)
 
-        //addGeofence()
+                    if (nombre != null && latitud != null && longitud != null && radio != null) {
+                        Log.i(TAG, "Geovalla: $nombre, Latitud: $latitud, Longitud: $longitud, Radio: $radio, Transition: $transitionType")
+                        mostrarGeovalla(nombre, latitud, longitud, radio)
+
+                        // Mostrar un Toast con el nombre de la geovalla y el tipo de transición
+                        Toast.makeText(
+                            this@ConsultAppR,
+                            "Geovalla: $nombre, Tipo de Transición: $transitionType",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+            }
+
+            override fun onCancelled(databaseError: DatabaseError) {
+                // Manejar error de lectura
+                Log.w(TAG, "loadPost:onCancelled", databaseError.toException())
+            }
+        }
+
+        postReference.addValueEventListener(postListener)
 
         // Cambio de estado del switch
         switchConsultar.setOnCheckedChangeListener { _, isChecked ->
@@ -259,6 +283,39 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
         map.isTrafficEnabled = true
         map.setOnMyLocationButtonClickListener(this)
         map.setOnMyLocationClickListener(this)
+        consultaGeofence()
+    }
+
+    private fun mostrarGeovalla(nombre: String?, latitud: Double?, longitud: Double?, radio: Float?) {
+        val circleOptions = CircleOptions()
+            .center(LatLng(latitud!!, longitud!!))
+            .radius(radio!!.toDouble())
+            .strokeWidth(2f)
+            .fillColor(0x40ff0000)
+            .strokeColor(Color.BLUE)
+        map.addMarker(MarkerOptions().position(LatLng(latitud, longitud)).title(nombre))
+        map.addCircle(circleOptions)
+    }
+
+    private fun consultaGeofence() {
+
+        val mDatabase = Firebase.database.reference
+
+        mDatabase.child("users").child("hmaury10").child("Geovallas").get().addOnSuccessListener { snapshot ->
+            snapshot.children.forEach { geovalla ->
+                val latitud = geovalla.child("latitud").getValue(String::class.java)!!.toDoubleOrNull()
+                val longitud = geovalla.child("longitud").getValue(String::class.java)!!.toDoubleOrNull()
+                val nombre = geovalla.child("name").getValue(String::class.java)
+                val radio = geovalla.child("radius").getValue(String::class.java)!!.toFloatOrNull()
+
+                Log.i(SaveUbicacionReal.TAG, "Geovalla: $nombre, Latitud: $latitud, Longitud: $longitud, Radio: $radio")
+
+                mostrarGeovalla(nombre, latitud, longitud, radio)
+            }
+        }.addOnFailureListener {
+            Log.e(SaveUbicacionReal.TAG, "Error getting data", it)
+        }
+
     }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
