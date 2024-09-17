@@ -13,14 +13,15 @@ import android.os.IBinder
 import android.util.Log
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
-import com.esime.ubicacionmaestra.Firstapp.ui.ConsultAppR.Companion
 import com.esime.ubicacionmaestra.R
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.location.Geofence
 import com.google.android.gms.location.GeofenceStatusCodes
 import com.google.android.gms.location.GeofencingClient
 import com.google.android.gms.location.GeofencingRequest
+import com.google.firebase.Firebase
 import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.database
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,19 +35,6 @@ import java.util.Locale
 
 
 class UbicacionGuardarService : Service() {
-
-    data class User(
-        val goevallaname: String? = null,
-        val latidudgeovalla: String? = null,
-        val longitudgeovalla: String? = null,
-        val alertageovalla: String? = null
-    )
-
-    private lateinit var geofencingClient: GeofencingClient
-    private val geoFenceId = "Pruebas"
-    private val geoFenceCenterLat = 19.4976
-    private val geoFenceCenterLng = -99.1356
-    private val geoFenceRadius = 100.0
 
     private lateinit var database: DatabaseReference
 
@@ -72,11 +60,12 @@ class UbicacionGuardarService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val bundle = intent?.extras
         val email = bundle?.getString("Email")  // Obtén el valor de email del intent
+        val uid = bundle?.getString("UID")
         val shouldTrackLocation = bundle?.getBoolean("Flag") ?: false   // Obtén el valor de shouldTrackLocation del intent para el While
 
         if (shouldTrackLocation && email != null) { // Verifica si shouldTrackLocation es true y si email no es nulo para el while
             startForeground(1, createNotification())    // Crea la notificación para el servicio en segundo plano
-            startLocationTraking(email) // Inicia la corrutina para la consulta de ubicación
+            startLocationTraking(email, uid) // Inicia la corrutina para la consulta de ubicación
         }
         else{
             stopLocationTraking()   // Si shouldTrackLocation es false, detiene la corrutina y detiene el servicio en segundo plano
@@ -91,65 +80,19 @@ class UbicacionGuardarService : Service() {
         stopSelf()  // Detiene el servicio
     }
 
-    @SuppressLint("MissingPermission")
-    private fun addGeofence() {
-        val geofence = Geofence.Builder()
-            .setRequestId(geoFenceId)
-            .setCircularRegion(
-                geoFenceCenterLat,
-                geoFenceCenterLng,
-                geoFenceRadius.toFloat()
-            )
-            .setExpirationDuration(Geofence.NEVER_EXPIRE)
-            .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER or Geofence.GEOFENCE_TRANSITION_EXIT)
-            .build()
-
-        val geofencingRequest = GeofencingRequest.Builder()
-            .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
-            .addGeofence(geofence)
-            .build()
-
-        Log.d(ConsultAppR.TAG, "Geofence in process to add")
-
-        val geofencePendingIntent = PendingIntent.getBroadcast(
-            this,
-            0,
-            Intent(this, GeofenceBroadcastReceiver::class.java),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
-        )
-
-        geofencingClient.addGeofences(geofencingRequest, geofencePendingIntent)
-            .addOnSuccessListener {
-                Toast.makeText(this, "Geovalla añadida correctamente", Toast.LENGTH_SHORT).show()
-            }
-            .addOnFailureListener { e ->
-                val errorMessage = when (e) {
-                    is ApiException -> {
-                        when (e.statusCode) {
-                            GeofenceStatusCodes.GEOFENCE_NOT_AVAILABLE -> "Geofence no disponible"
-                            GeofenceStatusCodes.GEOFENCE_TOO_MANY_GEOFENCES -> "Demasiadas geovallas"
-                            GeofenceStatusCodes.GEOFENCE_TOO_MANY_PENDING_INTENTS -> "Demasiados PendingIntents"
-                            else -> "Error desconocido: ${e.statusCode}"
-                        }
-                    }
-                    else -> "Error desconocido: ${e.localizedMessage}"
-                }
-                Toast.makeText(this, "Error añadiendo geovalla: $errorMessage", Toast.LENGTH_LONG).show()
-                Log.e("Geofence", errorMessage, e)
-            }
-    }
-
     // Función para iniciar el servicio
-    private fun startLocationTraking(email: String) {
+    private fun startLocationTraking(email: String, uid: String?) {
         serviceJob = serviceScope.launch {  // Inicia la corrutina del servicio
             while (isActive) {  // Mientras la corrutina esté activa
                 val result = locationService.getUserLocation(this@UbicacionGuardarService)  // Obtiene la ubicación del usuario de la LocationService
                 if (result != null) {   // Verifica si la ubicación no es nula
 
-
-
                     //Función cuando obtienes una nueva ubicación
                     saveLocation(email, result.latitude, result.longitude)
+
+                    database = Firebase.database.reference
+
+                    //database.child("users").child("$uid").updateChildren()
 
                     //Actualizar la ubicación en la base de datos
                     db.collection("users").document("$email").update(

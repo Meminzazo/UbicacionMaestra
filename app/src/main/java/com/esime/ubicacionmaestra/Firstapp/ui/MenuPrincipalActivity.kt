@@ -20,6 +20,7 @@ import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.database
+import com.google.firebase.firestore.FirebaseFirestore
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -76,6 +77,8 @@ private lateinit var database: DatabaseReference
 
 class MenuPrincipalActivity : AppCompatActivity() {
 
+    val db = FirebaseFirestore.getInstance()
+
     val TAG = "MenuPrincipalActivity"
 
     companion object {
@@ -104,6 +107,7 @@ class MenuPrincipalActivity : AppCompatActivity() {
         // Obtener el email del intent
         val bundle = intent.extras
         val email = bundle?.getString("Email1")
+        val uid = bundle?.getString("UID")
 
         // Definimos los botones para navegar a otras activitys
         val consultButton = findViewById<Button>(R.id.consultButton)
@@ -112,12 +116,12 @@ class MenuPrincipalActivity : AppCompatActivity() {
 
         database = Firebase.database.reference
 
-        detectDatabaseChanges("hmaury10@gmailcom")
 
         consultButton.setOnClickListener {
             Log.d("MenuPrincipalActivity", "to ConsultAppR Email: $email")
             val intent1 = Intent(this, ConsultAppR::class.java).apply {
                 putExtra("Email", email)    // Pasamos el email al intent
+                putExtra("UID", uid)
             }
             startActivity(intent1)  // Lanzamos la activity
         }
@@ -126,6 +130,7 @@ class MenuPrincipalActivity : AppCompatActivity() {
             Log.d("MenuPrincipalActivity", "to SaveUbicacionReal Email: $email")
             val intent = Intent(this, SaveUbicacionReal::class.java).apply {
                 putExtra("Email", email)    // Pasamos el email al intent
+                putExtra("UID", uid)
             }
             startActivity(intent)   // Lanzamos la activity
         }
@@ -182,38 +187,5 @@ class MenuPrincipalActivity : AppCompatActivity() {
                 Log.e(TAG, "Error en la llamada: ${t.message}")
             }
         })
-    }
-    // Función para detectar cambios en la base de datos en tiempo real
-    fun detectDatabaseChanges(userId: String) {
-        val database = FirebaseDatabase.getInstance().reference
-
-        // Referencia al nodo "users/userId"
-        val userReference = database.child("users").child(userId)
-
-        // Listener para detectar cambios en el nodo
-        val postListener = object : ValueEventListener {
-            override fun onDataChange(dataSnapshot: DataSnapshot) {
-                // Verificar si el snapshot contiene datos
-                if (dataSnapshot.exists()) {
-                    // Obtener el objeto usuario desde la base de datos
-                    val user = dataSnapshot.getValue(User::class.java)
-                    user?.let {
-
-                        Log.d(TAG, "Nombre: ${it.username}, Email: ${it.email}")
-                        // Aquí puedes agregar más lógica para manejar los cambios, como notificaciones o actualizaciones en la UI
-                    }
-                } else {
-                    Log.d(TAG, "No se encontraron datos.")
-                }
-            }
-
-            override fun onCancelled(databaseError: DatabaseError) {
-                // Manejar el error en caso de fallo en la lectura
-                Log.w(TAG, "Error al cargar datos.", databaseError.toException())
-            }
-        }
-
-        // Agregar el listener a la referencia
-        userReference.addValueEventListener(postListener)
     }
 }

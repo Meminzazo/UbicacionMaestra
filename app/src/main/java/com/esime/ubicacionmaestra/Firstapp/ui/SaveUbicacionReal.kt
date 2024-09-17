@@ -53,14 +53,16 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
     )
 
     data class User(
-        val name: String? = null,
-        val latitud: String? = null,
-        val longitud: String? = null,
-        val radius: String? = null,
+        val name: String? = "-",
+        val latitud: String? = "-",
+        val longitud: String? = "-",
+        val radius: String? = "-",
         val transitionTypes: String? = "null"
     )
 
     private lateinit var map:GoogleMap
+
+    private var uid: String? = null
 
     companion object {
         const val TAG = "SaveUbicacionReal" // Definimos la variable TAG aqui
@@ -90,6 +92,7 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         supportActionBar?.hide()
         val bundle = intent.extras
         val email = bundle?.getString("Email")
+        uid = bundle?.getString("UID")
 
         createFragment()
 
@@ -109,6 +112,7 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
                 val intent = Intent(this, UbicacionGuardarService::class.java).apply {
                     putExtra("Flag", true)
                     putExtra("Email", email)
+                    putExtra("UID", uid)
                 }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
                     startForegroundService(intent)
@@ -152,6 +156,7 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
 
             val intent = Intent(this, GeofenceBroadcastReceiver::class.java).apply {
                 putExtra("Nombre", nombre) // Añade el nombre al Intent
+                putExtra("UID", uid)
             }
 
             val geofencePendingIntent = PendingIntent.getBroadcast(
@@ -182,10 +187,9 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
     }
 
     private fun consultaGeofence() {
-
         val mDatabase = Firebase.database.reference
-
-        mDatabase.child("users").child("hmaury10").child("Geovallas").get().addOnSuccessListener { snapshot ->
+        Log.i(TAG, "Consulta de geovallas id: $uid")
+        mDatabase.child("users").child(uid!!).child("Geovallas").get().addOnSuccessListener { snapshot ->
             snapshot.children.forEach { geovalla ->
                 val latitud = geovalla.child("latitud").getValue(String::class.java)!!.toDoubleOrNull()
                 val longitud = geovalla.child("longitud").getValue(String::class.java)!!.toDoubleOrNull()
@@ -324,6 +328,8 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
+
+
         map = googleMap
         enableLocation()
         map.mapType = GoogleMap.MAP_TYPE_NORMAL

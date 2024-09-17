@@ -14,7 +14,10 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.esime.ubicacionmaestra.R
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.firestore.FirebaseFirestore
+
 
 
 
@@ -23,15 +26,34 @@ class AuthActivity : AppCompatActivity() {
 
     // Declaracion de la base de datos
     val db = FirebaseFirestore.getInstance()
+    private lateinit var database: DatabaseReference
 
+    companion object {
+        const val TAG = "AuthActivity" // Definimos la variable TAG aqui
+    }
     // Datos de la base de datos (Formato)
     val user = hashMapOf(
+        "ID" to "-",
         "Latitud" to "-",
         "Longitud" to "-",
         "Numero" to "-",
         "Nombre" to "-",
         "Apellido" to "-",
-        "GrupoID" to "-"
+        "GrupoID" to "-",
+    )
+
+    data class UserUbi(
+        val latitud: String? = "-",
+        val longitud: String? = "-",
+    )
+
+    // Clase para manejar los datos de la geovalla
+    data class GeofenceD(
+        val name: String = "-",
+        val latitude: String = "-",
+        val longitude: String = "-",
+        val radius: String  = "-",
+        val transitionTypes: String = "-"
     )
 
     // Funcion que se inicia al entrar a la activity
@@ -80,16 +102,22 @@ class AuthActivity : AppCompatActivity() {
         // ACCIONES AL PULSAR LE BOTON DE REGISTRARSE
         registrarButtom.setOnClickListener() {  // al hacer click en el boton de registrar hace lo que esta dentro
             val email = emailEditText.text.toString()
-                if (emailEditText.text.isNotEmpty() && passEditText.text.isNotEmpty())           //comprueba si los campos son vacios
-                {
-                    crearcolletion(email)  // solo crea a base de datos si los edit text no estan vacios
+                if (emailEditText.text.isNotEmpty() && passEditText.text.isNotEmpty()){           //comprueba si los campos son vacios
                     FirebaseAuth.getInstance().createUserWithEmailAndPassword(
                         emailEditText.text.toString(),        //servicio de firebase autentication
                         passEditText.text.toString()
-                    ).addOnCompleteListener()    //notifica si el registro a sido satisfactorio
-                    {
-                        if (it.isSuccessful) //si la operacion se completa correctamente ...
-                        {
+                    ).addOnCompleteListener(){    //notifica si el registro a sido satisfactorio
+                        if (it.isSuccessful){ //si la operacion se completa correctamente ...
+                            val UID = getUserId()
+
+                            database = FirebaseDatabase.getInstance().reference
+
+                            Log.d(TAG, "UID: $UID")
+
+                            database.child("users").child(UID!!).setValue(UserUbi())
+
+                            crearcolletion(email, UID)  // solo crea a base de datos si los edit text no estan vacios
+
                             showHome(
                                 it.result?.user?.email ?: "",
                                 ProviderType.BASIC
@@ -111,12 +139,9 @@ class AuthActivity : AppCompatActivity() {
 
 
 
-
         // ACCIONES AL PULSAR LE BOTON DE INGRESAR
        loginButton.setOnClickListener()
         {
-
-
             if(emailEditText.text.isNotEmpty() && passEditText.text.isNotEmpty())           //comprueba si los campos son vacios
             {
                 FirebaseAuth.getInstance().signInWithEmailAndPassword(emailEditText.text.toString(),        //ahora ingresa
@@ -165,14 +190,24 @@ class AuthActivity : AppCompatActivity() {
         startActivity(homeIntent)
     }
 
-    fun crearcolletion(email: String){
-
-        // Add a new document with a generated ID
-
+    fun crearcolletion(email: String, UID: String){
         db.collection("users").document(email)
             .set(user)
             .addOnSuccessListener { Log.d(HomeActivity.TAG, "Documento creado exitosamente") }
             .addOnFailureListener { e -> Log.w(HomeActivity.TAG, "Error al crear el documento", e) }
+
+        db.collection("users").document(email).update("ID", UID)
+
+        database = FirebaseDatabase.getInstance().reference
+
+        database.child("users").child(UID).setValue(UserUbi())
+
+        database.child("users").child(UID).child("Geovallas").setValue(GeofenceD())
+    }
+
+    fun getUserId(): String? {
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        return currentUser?.uid // El UID generado es único para cada usuario
     }
 
 }

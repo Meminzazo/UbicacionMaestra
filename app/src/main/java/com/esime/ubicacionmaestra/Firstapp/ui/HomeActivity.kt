@@ -11,11 +11,14 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.esime.ubicacionmaestra.R
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
 enum class ProviderType() {
     BASIC
 }
 class HomeActivity : AppCompatActivity() {
+
+    val db = FirebaseFirestore.getInstance()
 
     private lateinit var auth: FirebaseAuth
 
@@ -47,10 +50,16 @@ class HomeActivity : AppCompatActivity() {
         val bundle = intent.extras                              // recuperar parametros
         val email = bundle?.getString("Email")  ?: emailP            //parametro del home layut "como nombramos al edit text"
         val provider = bundle?.getString("provider") ?:""
-        setup(email,provider)  //en caso de no existir se manda algo vacio
+
+        val docRef = db.collection("users").document(email)
+
+        docRef.get().addOnSuccessListener { document ->
+            val UID = document.getString("ID")
+            setup(email,provider,UID!!)  //en caso de no existir se manda algo vacio
+        }
     }
 
-    private fun setup(email: String, provider: String) {
+    private fun setup(email: String, provider: String, uid: String) {
         title = "inicio"
 
         // Declaracion de los botones de la interfaz etc
@@ -97,6 +106,7 @@ class HomeActivity : AppCompatActivity() {
         goButton.setOnClickListener{    // Boton de perfil si es presionado hace lo que tiene dentro
             val intent = Intent(this, MenuPrincipalActivity::class.java).apply {
                 putExtra("Email1", email)   // aqui se manda el email a la siguiente activity
+                putExtra("UID", uid)
             }
             startActivity(intent)   // inicia la actividad
         }

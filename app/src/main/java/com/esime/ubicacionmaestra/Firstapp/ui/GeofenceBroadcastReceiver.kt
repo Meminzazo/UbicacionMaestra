@@ -21,6 +21,8 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
         const val EXTRA_GEOFENCE_NAME = "Nombre" // Asegúrate de usar la misma clave
     }
 
+    private var uid: String? = null
+
     data class User(
         val name: String? = null,
         val latitud: String? = null,
@@ -32,6 +34,9 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
     private lateinit var database: DatabaseReference
 
     override fun onReceive(context: Context, intent: Intent) {
+
+        val bundle = intent.extras
+        uid = bundle?.getString("UID")
 
         database = Firebase.database.reference
 
@@ -58,14 +63,14 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
             if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER) {
 
                 val update = mapOf("transitionTypes" to "true")
-                database.child("users").child("hmaury10").child("Geovallas").child(name).updateChildren(update)
+                database.child("users").child(uid!!).child("Geovallas").child(name).updateChildren(update)
                 Log.i(TAG, "Entrando en la geovalla: $name")
                 Toast.makeText(context, "Entrando en la geovalla: $name", Toast.LENGTH_SHORT).show()
 
             } else if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_EXIT) {
 
                 val update = mapOf("transitionTypes" to "false")
-                database.child("users").child("hmaury10").child("Geovallas").child(name).updateChildren(update)
+                database.child("users").child(uid!!).child("Geovallas").child(name).updateChildren(update)
                 Log.i(TAG, "Saliendo de la geovalla: $name")
                 Toast.makeText(context, "Saliendo de la geovalla: $name", Toast.LENGTH_SHORT).show()
 

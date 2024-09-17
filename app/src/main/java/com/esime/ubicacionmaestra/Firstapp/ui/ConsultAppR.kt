@@ -59,6 +59,8 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
     private lateinit var map: GoogleMap
     private var currentMarker: Marker? = null
 
+    private var uid: String? = null
+
     // Variables para la base de datos
     private val db = FirebaseFirestore.getInstance()
 
@@ -84,6 +86,7 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
         // Obtener el email del intent
         val bundle = intent.extras
         val email = bundle?.getString("Email")
+        uid = bundle?.getString("UID")
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -109,7 +112,7 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
         geofencingClient = LocationServices.getGeofencingClient(this)
         database = FirebaseDatabase.getInstance().reference
         // Configurar el listener para la geovalla
-        val postReference = database.child("users").child("hmaury10").child("Geovallas")
+        val postReference = database.child("users").child(uid!!).child("Geovallas")
         val postListener = object : ValueEventListener {
             override fun onDataChange(dataSnapshot: DataSnapshot) {
                 // Iterar sobre los datos de geovalla
@@ -119,6 +122,7 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                     val longitud = geovallaSnapshot.child("longitud").getValue(String::class.java)?.toDoubleOrNull()
                     val radio = geovallaSnapshot.child("radius").getValue(String::class.java)?.toFloatOrNull()
                     val transitionType = geovallaSnapshot.child("transitionTypes").getValue(String::class.java)
+
 
                     if (nombre != null && latitud != null && longitud != null && radio != null) {
                         Log.i(TAG, "Geovalla: $nombre, Latitud: $latitud, Longitud: $longitud, Radio: $radio, Transition: $transitionType")
@@ -286,22 +290,11 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
         consultaGeofence()
     }
 
-    private fun mostrarGeovalla(nombre: String?, latitud: Double?, longitud: Double?, radio: Float?) {
-        val circleOptions = CircleOptions()
-            .center(LatLng(latitud!!, longitud!!))
-            .radius(radio!!.toDouble())
-            .strokeWidth(2f)
-            .fillColor(0x40ff0000)
-            .strokeColor(Color.BLUE)
-        map.addMarker(MarkerOptions().position(LatLng(latitud, longitud)).title(nombre))
-        map.addCircle(circleOptions)
-    }
-
     private fun consultaGeofence() {
 
         val mDatabase = Firebase.database.reference
 
-        mDatabase.child("users").child("hmaury10").child("Geovallas").get().addOnSuccessListener { snapshot ->
+        mDatabase.child("users").child(uid!!).child("Geovallas").get().addOnSuccessListener { snapshot ->
             snapshot.children.forEach { geovalla ->
                 val latitud = geovalla.child("latitud").getValue(String::class.java)!!.toDoubleOrNull()
                 val longitud = geovalla.child("longitud").getValue(String::class.java)!!.toDoubleOrNull()
@@ -316,6 +309,17 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
             Log.e(SaveUbicacionReal.TAG, "Error getting data", it)
         }
 
+    }
+
+    private fun mostrarGeovalla(nombre: String?, latitud: Double?, longitud: Double?, radio: Float?) {
+        val circleOptions = CircleOptions()
+            .center(LatLng(latitud!!, longitud!!))
+            .radius(radio!!.toDouble())
+            .strokeWidth(2f)
+            .fillColor(0x40ff0000)
+            .strokeColor(Color.BLUE)
+        map.addMarker(MarkerOptions().position(LatLng(latitud, longitud)).title(nombre))
+        map.addCircle(circleOptions)
     }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
