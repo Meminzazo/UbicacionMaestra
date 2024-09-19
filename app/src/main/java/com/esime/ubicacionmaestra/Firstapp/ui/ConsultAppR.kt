@@ -59,6 +59,10 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
     private lateinit var map: GoogleMap
     private var currentMarker: Marker? = null
 
+    // Variables para almacenar los ValueEventListener
+    private var geofenceListener: ValueEventListener? = null
+    private var locationListener: ValueEventListener? = null
+
     private var uid: String? = null
 
     // Variables para la base de datos
@@ -111,166 +115,110 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
 
         geofencingClient = LocationServices.getGeofencingClient(this)
         database = FirebaseDatabase.getInstance().reference
-        // Configurar el listener para la geovalla
-        val postReference = database.child("users").child(uid!!).child("Geovallas")
-        val postListener = object : ValueEventListener {
-            override fun onDataChange(dataSnapshot: DataSnapshot) {
-                // Iterar sobre los datos de geovalla
-                for (geovallaSnapshot in dataSnapshot.children) {
-                    val nombre = geovallaSnapshot.child("name").getValue(String::class.java)
-                    val latitud = geovallaSnapshot.child("latitud").getValue(String::class.java)?.toDoubleOrNull()
-                    val longitud = geovallaSnapshot.child("longitud").getValue(String::class.java)?.toDoubleOrNull()
-                    val radio = geovallaSnapshot.child("radius").getValue(String::class.java)?.toFloatOrNull()
-                    val transitionType = geovallaSnapshot.child("transitionTypes").getValue(String::class.java)
 
 
-                    if (nombre != null && latitud != null && longitud != null && radio != null) {
-                        Log.i(TAG, "Geovalla: $nombre, Latitud: $latitud, Longitud: $longitud, Radio: $radio, Transition: $transitionType")
-                        mostrarGeovalla(nombre, latitud, longitud, radio)
 
-                        // Mostrar un Toast con el nombre de la geovalla y el tipo de transición
-                        Toast.makeText(
-                            this@ConsultAppR,
-                            "Geovalla: $nombre, Tipo de Transición: $transitionType",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
-                }
-            }
-
-            override fun onCancelled(databaseError: DatabaseError) {
-                // Manejar error de lectura
-                Log.w(TAG, "loadPost:onCancelled", databaseError.toException())
-            }
-        }
-
-        postReference.addValueEventListener(postListener)
-
-        // Cambio de estado del switch
+// Cambio de estado del switch
         switchConsultar.setOnCheckedChangeListener { _, isChecked ->
-            if (emailUbicacion.text.toString()
-                    .isNotEmpty()
-            ) { // Verificar si el EditText no está vacío
+            if (emailUbicacion.text.toString().isNotEmpty()) {
+                val docRef = db.collection("users").document(email!!)
+                val emailUbicacion2 = emailUbicacion.text.toString()
+                val docRef2 = db.collection("users").document(emailUbicacion2)
 
-                val docRef = db.collection("users")
-                    .document(email!!)   // Obtener la referencia al documento del usuario en Firestore
-                val emailUbicacion2 =
-                    emailUbicacion.text.toString()    // Obtener el valor del EditText
-                val docRef2 = db.collection("users")
-                    .document(emailUbicacion2)  // Obtener la referencia al documento del usuario a consultar en Firestore
+                docRef.get().addOnSuccessListener { document ->
+                    val GrupoIDPropio = document.getString("GrupoID")
 
-                docRef.get()
-                    .addOnSuccessListener { document -> // Si obtiene el documento del usuario de manera exitosa
+                    docRef2.get().addOnSuccessListener { document1 ->
+                        val GrupoID = document1.getString("GrupoID")
+                        val UID = document1.getString("ID")
 
-                        val GrupoIDPropio =
-                            document.getString("GrupoID")   // Obtener el GrupoID del usuario actual
+                        if (GrupoIDPropio == GrupoID) {
+                            // Aquí se activa el listener cuando el switch está activado
+                            if (isChecked) {
+                                // Inicia la escucha de geovallas si no hay un listener activo
+                                if (geofenceListener == null) {
+                                    val postReference = database.child("users").child(UID!!).child("Geovallas")
+                                    geofenceListener = object : ValueEventListener {
+                                        override fun onDataChange(dataSnapshot: DataSnapshot) {
+                                            for (geovallaSnapshot in dataSnapshot.children) {
+                                                val nombre = geovallaSnapshot.child("name").getValue(String::class.java)
+                                                val latitud = geovallaSnapshot.child("latitud").getValue(String::class.java)?.toDoubleOrNull()
+                                                val longitud = geovallaSnapshot.child("longitud").getValue(String::class.java)?.toDoubleOrNull()
+                                                val radio = geovallaSnapshot.child("radius").getValue(String::class.java)?.toFloatOrNull()
+                                                val transitionType = geovallaSnapshot.child("transitionTypes").getValue(String::class.java)
 
-                        docRef2.get()
-                            .addOnSuccessListener { document1 ->    // Si obtiene el documento del usuario a consultar de manera exitosa
-
-                                val GrupoID =
-                                    document1.getString("GrupoID") // Obtener el GrupoID del usuario a consultar
-
-                                if (GrupoIDPropio == GrupoID) { // Verificar si pertenecen al mismo grupo
-                                    if (isChecked) {    // Si el switch está activado
-                                        emailCon =
-                                            emailUbicacion.text.toString()   // Obtener el valor del EditText
-                                        flag = isChecked
-                                        lifecycleScope.launch {
-                                            val docRef = db.collection("users")
-                                                .document(emailCon)  // Obtener la referencia al documento del usuario a consultar en Firestore
-                                            while (flag) {
-
-
-                                                docRef.get().addOnSuccessListener { document ->
-                                                    if (document != null) {
-
-                                                        val LatitudString =
-                                                            document.getString("Latitud")   // Obtener la latitud del documento del usuario a consultar
-                                                        val LognitudString =
-                                                            document.getString("Longitud") // Obtener la longitud del documento del usuario a consultar
-
-                                                        val LatitudDouble =
-                                                            LatitudString!!.toDouble()  // Convertir las coordenadas a Double
-                                                        val LongitudDouble =
-                                                            LognitudString!!.toDouble()    // Convertir las coordenadas a Double
-
-                                                        if (LatitudDouble != null && LongitudDouble != null) {  // Verificar si las coordenadas son nulas
-
-                                                            val coordinates =
-                                                                LatLng(
-                                                                    LatitudDouble,
-                                                                    LongitudDouble
-                                                                )
-
-                                                            currentMarker?.remove() // Eliminar el marcador actual si existe
-
-                                                            // Crear un nuevo marcador y actualizar currentMarker
-                                                            currentMarker = map.addMarker(
-                                                                MarkerOptions()     // Opciones del marcador para personalizarlo
-                                                                    .position(coordinates)
-                                                                    .title("Aprox")
-                                                                    .icon(
-                                                                        BitmapDescriptorFactory.defaultMarker(
-                                                                            BitmapDescriptorFactory.HUE_AZURE
-                                                                        )
-                                                                    )
-                                                                    .flat(true)
-                                                            )
-
-                                                            map.animateCamera(      // Animacion del mapa en el punto
-                                                                CameraUpdateFactory.newLatLngZoom(
-                                                                    coordinates,
-                                                                    18f
-                                                                ),
-                                                                5000,
-                                                                null
-                                                            )
-
-                                                        } else {
-                                                            Log.d(TAG, "No hay Latitud ni Longitud")
-                                                        }
-                                                    } else {
-                                                        Log.d(TAG, "No such document")
-                                                    }
+                                                if (nombre != null && latitud != null && longitud != null && radio != null) {
+                                                    Log.i(TAG, "Geovalla: $nombre, Latitud: $latitud, Longitud: $longitud, Radio: $radio, Transition: $transitionType")
+                                                    mostrarGeovalla(nombre, latitud, longitud, radio)
+                                                    Toast.makeText(this@ConsultAppR, "Geovalla: $nombre, Tipo de Transición: $transitionType", Toast.LENGTH_LONG).show()
                                                 }
-                                                    .addOnFailureListener { excepcion ->
-                                                        Log.d(TAG, "get failed with ", excepcion)
-                                                    }
-
-                                                delay(20000)    // Espera 20 segundos antes de volver a consultar
                                             }
                                         }
 
-                                    } else {
-                                        flag = false
-                                        currentMarker?.remove() // Si el switch se apaga, elimina el marcador actual
-                                        switchConsultar.isChecked = false // Desmarca el switch
+                                        override fun onCancelled(databaseError: DatabaseError) {
+                                            Log.w(TAG, "loadPost:onCancelled", databaseError.toException())
+                                        }
                                     }
-                                } else {
-                                    Toast.makeText(
-                                        this,
-                                        "No pertenecen al mismo grupo",
-                                        Toast.LENGTH_LONG
-                                    )
-                                        .show()
-                                    flag = false
-                                    currentMarker?.remove() // Si el switch se apaga, elimina el marcador actual
-                                    switchConsultar.isChecked = false   // Desmarca el switch
+                                    postReference.addValueEventListener(geofenceListener!!)
                                 }
+
+                                if (locationListener == null) {
+                                    Log.i(TAG, "Si funciona el listener de ubicación con el ID: $UID")
+                                    val postReference1 = database.child("users").child(UID!!)
+                                    locationListener = object : ValueEventListener {
+                                        override fun onDataChange(dataSnapshot: DataSnapshot) {
+                                            val latitud = dataSnapshot.child("latitud").getValue(String::class.java)?.toDoubleOrNull()
+                                            val longitud = dataSnapshot.child("longitud").getValue(String::class.java)?.toDoubleOrNull()
+
+                                            if (latitud != null && longitud != null) {
+                                                Log.i(TAG, "Latitud: $latitud, Longitud: $longitud")
+                                                val coordinates = LatLng(latitud, longitud)
+                                                currentMarker?.remove()
+                                                currentMarker = map.addMarker(MarkerOptions().position(coordinates).title("Aprox").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)).flat(true))
+                                                map.animateCamera(CameraUpdateFactory.newLatLngZoom(coordinates, 18f), 5000, null)
+                                            } else {
+                                                Log.i(TAG, "Latitud y Longitud son nulos")
+                                            }
+                                        }
+
+                                        override fun onCancelled(databaseError: DatabaseError) {
+                                            Log.w(TAG, "loadPost:onCancelled", databaseError.toException())
+                                        }
+                                    }
+                                    postReference1.addValueEventListener(locationListener!!)
+                                } else {
+                                    Log.i(TAG, "No funciona el listener de ubicación")
+                                }
+
+
+                            } else {
+                                // Si el switch está apagado, elimina los listeners
+                                geofenceListener?.let { listener ->
+                                    database.child("users").child(UID!!).child("Geovallas").removeEventListener(listener)
+                                    geofenceListener = null
+                                }
+
+                                locationListener?.let { listener ->
+                                    database.child(UID!!).removeEventListener(listener)
+                                    locationListener = null
+                                }
+
+                                currentMarker?.remove()
+                                switchConsultar.isChecked = false
                             }
+                        } else {
+                            Toast.makeText(this, "No pertenecen al mismo grupo", Toast.LENGTH_LONG).show()
+                            currentMarker?.remove()
+                            switchConsultar.isChecked = false
+                        }
                     }
+                }
             } else {
-                Toast.makeText(this, "Ingresa una direccion de correo valida", Toast.LENGTH_LONG)
-                    .show()
-                flag = false
-                currentMarker?.remove() // Si el switch se apaga, elimina el marcador actual
-                switchConsultar.isChecked = false   // Desmarca el switch
+                Toast.makeText(this, "Ingresa una dirección de correo válida", Toast.LENGTH_LONG).show()
+                currentMarker?.remove()
+                switchConsultar.isChecked = false
             }
-            with(sharedPrefs.edit()) {
-                putBoolean(MenuPrincipalActivity.SWITCH_STATE, isChecked)
-                apply()
-            }
+
         }
     }
 
@@ -291,25 +239,32 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
     }
 
     private fun consultaGeofence() {
-
         val mDatabase = Firebase.database.reference
+        Log.d(TAG, "UID: $uid")
 
-        mDatabase.child("users").child(uid!!).child("Geovallas").get().addOnSuccessListener { snapshot ->
-            snapshot.children.forEach { geovalla ->
-                val latitud = geovalla.child("latitud").getValue(String::class.java)!!.toDoubleOrNull()
-                val longitud = geovalla.child("longitud").getValue(String::class.java)!!.toDoubleOrNull()
-                val nombre = geovalla.child("name").getValue(String::class.java)
-                val radio = geovalla.child("radius").getValue(String::class.java)!!.toFloatOrNull()
 
-                Log.i(SaveUbicacionReal.TAG, "Geovalla: $nombre, Latitud: $latitud, Longitud: $longitud, Radio: $radio")
 
-                mostrarGeovalla(nombre, latitud, longitud, radio)
+        mDatabase.child("users").child(uid!!).child("Geovallas").get()
+            .addOnSuccessListener { snapshot ->
+                snapshot.children.forEach { geovalla ->
+                    val latitud = geovalla.child("latitud").getValue(String::class.java)?.toDoubleOrNull()
+                    val longitud = geovalla.child("longitud").getValue(String::class.java)?.toDoubleOrNull()
+                    val nombre = geovalla.child("name").getValue(String::class.java)
+                    val radio = geovalla.child("radius").getValue(String::class.java)?.toFloatOrNull()
+
+                    // Verificar si alguno de los valores es nulo
+                    if (latitud != null && longitud != null && nombre != null && radio != null) {
+                        Log.i(TAG, "Geovalla: $nombre, Latitud: $latitud, Longitud: $longitud, Radio: $radio")
+                        mostrarGeovalla(nombre, latitud, longitud, radio)
+                    } else {
+                        Log.w(TAG, "Geovalla incompleta: latitud: $latitud, longitud: $longitud, nombre: $nombre, radio: $radio")
+                    }
+                }
+            }.addOnFailureListener {
+                Log.e(TAG, "Error getting data", it)
             }
-        }.addOnFailureListener {
-            Log.e(SaveUbicacionReal.TAG, "Error getting data", it)
-        }
-
     }
+
 
     private fun mostrarGeovalla(nombre: String?, latitud: Double?, longitud: Double?, radio: Float?) {
         val circleOptions = CircleOptions()

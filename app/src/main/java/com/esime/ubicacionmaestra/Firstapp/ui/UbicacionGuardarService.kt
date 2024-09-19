@@ -93,14 +93,29 @@ class UbicacionGuardarService : Service() {
                     database = Firebase.database.reference
 
                     //database.child("users").child("$uid").updateChildren()
+                    // Crear una referencia al nodo específico del usuario en Realtime Database
+                    val userRef = Firebase.database.reference.child("users")
+
+                    // Actualizar los datos de latitud y longitud
+                    userRef.child("$uid").updateChildren(mapOf(
+                        "latitud" to result?.latitude.toString(),
+                        "longitud" to result?.longitude.toString()
+                    )).addOnSuccessListener {
+                        // Aquí puedes manejar lo que suceda después de una actualización exitosa
+                        Log.d("Update", "Latitud y longitud actualizadas correctamente")
+                    }.addOnFailureListener {
+                        // Aquí puedes manejar lo que suceda si falla la actualización
+                        Log.e("Update", "Error al actualizar latitud y longitud", it)
+                    }
+
 
                     //Actualizar la ubicación en la base de datos
-                    db.collection("users").document("$email").update(
-                        mapOf(  // Actualiza los datos en la base de datos en un arreglo de esta forma
-                            "Latitud" to "${result?.latitude}",
-                            "Longitud" to "${result?.longitude}"
-                        )
-                    )
+//                    db.collection("users").document("$email").update(
+//                        mapOf(  // Actualiza los datos en la base de datos en un arreglo de esta forma
+//                            "Latitud" to "${result?.latitude}",
+//                            "Longitud" to "${result?.longitude}"
+//                        )
+//                    )
                 }
                 delay(30000)    // Espera 30 segundos antes de la próxima consulta de ubicación
             }

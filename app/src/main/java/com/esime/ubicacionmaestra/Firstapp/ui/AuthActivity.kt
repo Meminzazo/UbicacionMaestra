@@ -49,11 +49,11 @@ class AuthActivity : AppCompatActivity() {
 
     // Clase para manejar los datos de la geovalla
     data class GeofenceD(
-        val name: String = "-",
-        val latitude: String = "-",
-        val longitude: String = "-",
-        val radius: String  = "-",
-        val transitionTypes: String = "-"
+        val name: String = "ESIME",
+        val latitud: String = "19.498850591050665",
+        val longitud: String = "-99.13460084531137",
+        val radius: String  = "100",
+        val transitionTypes: String = "false"
     )
 
     // Funcion que se inicia al entrar a la activity
@@ -202,7 +202,7 @@ class AuthActivity : AppCompatActivity() {
 
         database.child("users").child(UID).setValue(UserUbi())
 
-        database.child("users").child(UID).child("Geovallas").setValue(GeofenceD())
+        database.child("users").child(UID).child("Geovallas").child("ESIME").setValue(GeofenceD())
     }
 
     fun getUserId(): String? {

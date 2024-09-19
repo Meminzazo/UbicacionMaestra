@@ -189,23 +189,31 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
     private fun consultaGeofence() {
         val mDatabase = Firebase.database.reference
         Log.i(TAG, "Consulta de geovallas id: $uid")
-        mDatabase.child("users").child(uid!!).child("Geovallas").get().addOnSuccessListener { snapshot ->
-            snapshot.children.forEach { geovalla ->
-                val latitud = geovalla.child("latitud").getValue(String::class.java)!!.toDoubleOrNull()
-                val longitud = geovalla.child("longitud").getValue(String::class.java)!!.toDoubleOrNull()
-                val nombre = geovalla.child("name").getValue(String::class.java)
-                val radio = geovalla.child("radius").getValue(String::class.java)!!.toFloatOrNull()
 
-                Log.i(TAG, "Geovalla: $nombre, Latitud: $latitud, Longitud: $longitud, Radio: $radio")
+        if (uid != null) {
+            mDatabase.child("users").child(uid!!).child("Geovallas").get().addOnSuccessListener { snapshot ->
+                snapshot.children.forEach { geovalla ->
+                    val latitud = geovalla.child("latitud").getValue(String::class.java)?.toDoubleOrNull()
+                    val longitud = geovalla.child("longitud").getValue(String::class.java)?.toDoubleOrNull()
+                    val nombre = geovalla.child("name").getValue(String::class.java)
+                    val radio = geovalla.child("radius").getValue(String::class.java)?.toFloatOrNull()
 
-                addGeofence(nombre, latitud, longitud, radio)
-                mostrarGeovalla(nombre, latitud, longitud, radio)
+                    if (latitud != null && longitud != null && radio != null) {
+                        Log.i(TAG, "Geovalla: $nombre, Latitud: $latitud, Longitud: $longitud, Radio: $radio")
+                        addGeofence(nombre, latitud, longitud, radio)
+                        mostrarGeovalla(nombre, latitud, longitud, radio)
+                    } else {
+                        Log.e(TAG, "Error en los datos de la geovalla: $nombre")
+                    }
+                }
+            }.addOnFailureListener {
+                Log.e(TAG, "Error getting data", it)
             }
-        }.addOnFailureListener {
-            Log.e(TAG, "Error getting data", it)
+        } else {
+            Log.e(TAG, "UID es null")
         }
-
     }
+
 
     private fun mostrarGeovalla(nombre: String?, latitud: Double?, longitud: Double?, radio: Float?) {
         val circleOptions = CircleOptions()
@@ -328,8 +336,6 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
-
-
         map = googleMap
         enableLocation()
         map.mapType = GoogleMap.MAP_TYPE_NORMAL
