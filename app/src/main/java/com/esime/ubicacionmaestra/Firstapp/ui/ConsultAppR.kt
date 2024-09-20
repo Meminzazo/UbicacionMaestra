@@ -10,7 +10,9 @@ import android.graphics.Color
 import android.location.Location
 import android.os.Bundle
 import android.util.Log
+import android.widget.ArrayAdapter
 import android.widget.EditText
+import android.widget.Spinner
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -64,6 +66,9 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
     private var locationListener: ValueEventListener? = null
 
     private var uid: String? = null
+    private var emailPropio: String? = null
+    private var emailCon: String? = null
+
 
     // Variables para la base de datos
     private val db = FirebaseFirestore.getInstance()
@@ -89,7 +94,7 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
 
         // Obtener el email del intent
         val bundle = intent.extras
-        val email = bundle?.getString("Email")
+        emailPropio = bundle?.getString("Email")
         uid = bundle?.getString("UID")
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
@@ -99,40 +104,82 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
         }
 
         // Obtener referencias a los elementos de la interfaz de usuario (botones,EditText,etc)
-        val emailUbicacion = findViewById<EditText>(R.id.emailUbicacion)
         val switchConsultar =
             findViewById<SwitchMaterial>(R.id.ConsultarUbicacion) as SwitchMaterial
         val sharedPrefs =
             getSharedPreferences(MenuPrincipalActivity.PREFS_NAME, Context.MODE_PRIVATE)
         switchConsultar.isChecked =
             sharedPrefs.getBoolean(MenuPrincipalActivity.SWITCH_STATE, false)
-        var emailCon = ""
+
+        val spinnerUbi = findViewById<Spinner>(R.id.emailSpinner)
+        val emailsList = mutableListOf<String>()
+
 
         // El mapa
         createFragment()
 
+
         var flag = false
+        var grupoID = ""
 
         geofencingClient = LocationServices.getGeofencingClient(this)
         database = FirebaseDatabase.getInstance().reference
 
 
+        val docRef2 = db.collection("users").document(emailPropio!!)
+        docRef2.get().addOnSuccessListener { document ->
+            val GrupoID = document.getString("GrupoID")
+            if (GrupoID != "-") {
+                grupoID = GrupoID!!
+            }
 
-// Cambio de estado del switch
+        val docRef = db.collection("grupos").document(grupoID)
+        docRef.get().addOnSuccessListener { document ->
+            if (document != null) {
+                for (field in document.data?.keys.orEmpty()) {
+                    // Aquí asumimos que los campos son email1, email2, etc.
+                    val email = document.getString(field)
+                    if (!email.isNullOrEmpty()) {
+                        emailsList.add(email)
+                        if(email != emailPropio){
+                            emailCon = email
+                        }
+                    }
+                }
+
+                // Configura el adaptador del Spinner
+                val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, emailsList)
+                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                spinnerUbi.adapter = adapter
+
+
+
+            } else {
+                Toast.makeText(this, "No se encontró el grupo", Toast.LENGTH_SHORT).show()
+            }
+        }.addOnFailureListener { e ->
+            Log.w(TAG, "Error al obtener el documento", e)
+        }
+
+        // Cambio de estado del switch
         switchConsultar.setOnCheckedChangeListener { _, isChecked ->
-            if (emailUbicacion.text.toString().isNotEmpty()) {
-                val docRef = db.collection("users").document(email!!)
-                val emailUbicacion2 = emailUbicacion.text.toString()
-                val docRef2 = db.collection("users").document(emailUbicacion2)
+
+            val emailUbi = spinnerUbi.toString()
+
+            if (emailUbi.isEmpty()) {
+
+                Toast.makeText(this, "Ingresa una dirección de correo válida", Toast.LENGTH_LONG).show()
+                currentMarker?.remove()
+                switchConsultar.isChecked = false
+
+
+            } else {
+
+                val docRef = db.collection("users").document(emailCon!!)
 
                 docRef.get().addOnSuccessListener { document ->
-                    val GrupoIDPropio = document.getString("GrupoID")
+                        val UID = document.getString("ID")
 
-                    docRef2.get().addOnSuccessListener { document1 ->
-                        val GrupoID = document1.getString("GrupoID")
-                        val UID = document1.getString("ID")
-
-                        if (GrupoIDPropio == GrupoID) {
                             // Aquí se activa el listener cuando el switch está activado
                             if (isChecked) {
                                 // Inicia la escucha de geovallas si no hay un listener activo
@@ -149,7 +196,7 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
 
                                                 if (nombre != null && latitud != null && longitud != null && radio != null) {
                                                     Log.i(TAG, "Geovalla: $nombre, Latitud: $latitud, Longitud: $longitud, Radio: $radio, Transition: $transitionType")
-                                                    mostrarGeovalla(nombre, latitud, longitud, radio)
+                                                    //mostrarGeovalla(nombre, latitud, longitud, radio)
                                                     Toast.makeText(this@ConsultAppR, "Geovalla: $nombre, Tipo de Transición: $transitionType", Toast.LENGTH_LONG).show()
                                                 }
                                             }
@@ -206,20 +253,14 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                                 currentMarker?.remove()
                                 switchConsultar.isChecked = false
                             }
-                        } else {
-                            Toast.makeText(this, "No pertenecen al mismo grupo", Toast.LENGTH_LONG).show()
-                            currentMarker?.remove()
-                            switchConsultar.isChecked = false
-                        }
+
                     }
                 }
-            } else {
-                Toast.makeText(this, "Ingresa una dirección de correo válida", Toast.LENGTH_LONG).show()
-                currentMarker?.remove()
-                switchConsultar.isChecked = false
-            }
+
+
 
         }
+    }
     }
 
     ////////////////////////////////// COSAS QUE HACEN QUE FUNCIONE EL MAPA ///////////////////////////////////////////////
@@ -241,9 +282,6 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
     private fun consultaGeofence() {
         val mDatabase = Firebase.database.reference
         Log.d(TAG, "UID: $uid")
-
-
-
         mDatabase.child("users").child(uid!!).child("Geovallas").get()
             .addOnSuccessListener { snapshot ->
                 snapshot.children.forEach { geovalla ->

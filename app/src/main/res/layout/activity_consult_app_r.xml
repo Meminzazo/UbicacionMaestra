@@ -7,14 +7,14 @@
     android:layout_height="match_parent"
     tools:context=".Firstapp.ui.ConsultAppR">
 
-    <androidx.appcompat.widget.AppCompatEditText
-        android:id="@+id/emailUbicacion"
+    <Spinner
+        android:id="@+id/emailSpinner"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Email"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textView3" />
+        app:layout_constraintTop_toBottomOf="@+id/textView3"
+        />
 
     <TextView
         android:id="@+id/textView3"
@@ -46,13 +46,12 @@
         android:name="com.google.android.gms.maps.SupportMapFragment"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="55dp"
+        android:layout_marginTop="100dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/emailUbicacion"
-        app:layout_constraintVertical_bias="0.505" />
+        app:layout_constraintTop_toBottomOf="@+id/emailSpinner" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

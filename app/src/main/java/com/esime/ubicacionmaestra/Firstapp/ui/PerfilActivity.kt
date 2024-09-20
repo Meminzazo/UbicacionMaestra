@@ -26,6 +26,8 @@ class PerfilActivity : AppCompatActivity() {
     private lateinit var apellidosEditText: EditText
     private lateinit var telefonoEditText: EditText
 
+    private var uid: String? = null
+
     // Declaracion del objeto para la base de datos
     private val db = FirebaseFirestore.getInstance()
 
@@ -83,6 +85,7 @@ class PerfilActivity : AppCompatActivity() {
 
         val bundle = intent.extras                              // recuperar parametros
         val emailCon = bundle?.getString("Email1")              //parametro del home layut "como nombramos al edit text"
+        uid = bundle?.getString("UID")
 
         IDGrupo.transformationMethod = PasswordTransformationMethod.getInstance()   // Para que el ID del grupo este oculto
 
@@ -124,6 +127,13 @@ class PerfilActivity : AppCompatActivity() {
                         .update("GrupoID", randomKey)   // Actualiza el ID del grupo del usuario actual en la base de datos
                     IDGrupo.text = randomKey
                     PertenecerGrupo.text = "Pertenece al grupo"  // Cambia el texto del botón para indicar que el usuario pertenece al grupo
+
+                    // Datos de la base de datos (Formato)
+                    val groupData = hashMapOf(
+                        "email" to emailCon
+                    )
+
+                    db.collection("grupos").document(randomKey).set(groupData)
                 }
                 else{
                     Toast.makeText(this, "Ya perteneces a un grupo", Toast.LENGTH_SHORT).show()
@@ -140,6 +150,18 @@ class PerfilActivity : AppCompatActivity() {
                         db.collection("users").document(emailCon).update("GrupoID", ID) // Actualiza el ID del grupo que ingreso en el menu emergente en la base de datos
                         PertenecerGrupo.text = "Pertenece al grupo" // Cambia el texto del botón para indicar que el usuario pertenece al grupo
                         IDGrupo.text = ID
+
+                        val grupoRef = db.collection("grupos").document(ID)
+                        grupoRef.get().addOnSuccessListener {grupoDocument ->
+                            if (grupoDocument.exists()){
+
+                                val emailCount = grupoDocument.data?.size ?: 0
+
+                                val newEmailField = "email${emailCount + 1}"
+
+                                grupoRef.update(newEmailField, emailCon)
+                            }
+                        }
                     }
 
                 }
@@ -154,6 +176,30 @@ class PerfilActivity : AppCompatActivity() {
             docRef.get().addOnSuccessListener { document -> // Si se encuentra el documento se ejecuta el codigo dentro
                 val GrupoID = document.getString("GrupoID") // Guarda el ID del grupo del usuario actual
                 if (GrupoID != "-") {   // Si el ID del grupo del usuario actual es diferente de "-" ejecuta el codigo dentro
+
+                    val grupoRef = db.collection("grupos").document(GrupoID!!)
+                    grupoRef.get().addOnSuccessListener {grupoDocument ->
+                        if (grupoDocument.exists()){
+                            val emailsMap = grupoDocument.data
+                            var emailToRemove: String? = null
+
+
+                            for ((key, value) in emailsMap!!) {
+                                if (value == emailCon) {
+                                    emailToRemove = key
+                                    break
+                                }
+                            }
+
+                            if (emailToRemove != null) {
+                                grupoRef.update(emailToRemove, null).addOnSuccessListener {
+                                    Toast.makeText(this, "Has salido del grupo", Toast.LENGTH_SHORT).show()
+                                }.addOnFailureListener {
+                                    Toast.makeText(this, "Error al salir del grupo", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    }
                     db.collection("users").document(emailCon).update("GrupoID", "-")    // Actualiza el ID del grupo a "-" (valor default que usamos para el ID del grupo) del usuario actual en la base de datos
                     PertenecerGrupo.text = "No perteneces a un grupo"   // Cambia el texto del botón para indicar que el usuario no pertenece al grupo
                     IDGrupo.text = "-"  // Cambia el ID del grupo del usuario actual a "-" (valor default que usamos para el ID del grupo)

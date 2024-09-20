@@ -98,6 +98,7 @@ class HomeActivity : AppCompatActivity() {
         perfilButton.setOnClickListener{    // Boton de perfil si es presionado hace lo que tiene dentro
             val intent = Intent(this, PerfilActivity::class.java).apply {
                 putExtra("Email1", email)
+                putExtra("UID", uid)
             }
             startActivity(intent)
         }

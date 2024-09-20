@@ -117,7 +117,7 @@ class UbicacionGuardarService : Service() {
 //                        )
 //                    )
                 }
-                delay(30000)    // Espera 30 segundos antes de la próxima consulta de ubicación
+                delay(5000)    // Espera 30 segundos antes de la próxima consulta de ubicación
             }
         }
     }
