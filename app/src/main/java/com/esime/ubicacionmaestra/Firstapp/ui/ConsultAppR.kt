@@ -120,20 +120,25 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
 
 
         var flag = false
-        var grupoID = ""
+        var grupoID: String? = null
 
         geofencingClient = LocationServices.getGeofencingClient(this)
         database = FirebaseDatabase.getInstance().reference
 
 
         val docRef2 = db.collection("users").document(emailPropio!!)
+
+        Log.i(TAG, emailPropio!!)
+
         docRef2.get().addOnSuccessListener { document ->
             val GrupoID = document.getString("GrupoID")
             if (GrupoID != "-") {
                 grupoID = GrupoID!!
             }
 
-        val docRef = db.collection("grupos").document(grupoID)
+            Log.i(TAG,"GrupoID: $grupoID")
+
+        val docRef = db.collection("grupos").document(grupoID!!)
         docRef.get().addOnSuccessListener { document ->
             if (document != null) {
                 for (field in document.data?.keys.orEmpty()) {
@@ -141,9 +146,6 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                     val email = document.getString(field)
                     if (!email.isNullOrEmpty()) {
                         emailsList.add(email)
-                        if(email != emailPropio){
-                            emailCon = email
-                        }
                     }
                 }
 
@@ -164,7 +166,8 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
         // Cambio de estado del switch
         switchConsultar.setOnCheckedChangeListener { _, isChecked ->
 
-            val emailUbi = spinnerUbi.toString()
+            val emailUbi = spinnerUbi.selectedItem.toString()
+            Log.i(TAG, "Email a consultar: $emailUbi")
 
             if (emailUbi.isEmpty()) {
 
@@ -175,7 +178,7 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
 
             } else {
 
-                val docRef = db.collection("users").document(emailCon!!)
+                val docRef = db.collection("users").document(emailUbi)
 
                 docRef.get().addOnSuccessListener { document ->
                         val UID = document.getString("ID")
