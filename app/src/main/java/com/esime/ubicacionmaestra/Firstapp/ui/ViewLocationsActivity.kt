@@ -2,6 +2,8 @@ package com.esime.ubicacionmaestra.Firstapp.ui
 
 import android.annotation.SuppressLint
 import android.app.DatePickerDialog
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
@@ -18,6 +20,7 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.PolylineOptions
@@ -25,6 +28,8 @@ import com.google.firebase.firestore.FirebaseFirestore
 import java.util.Calendar
 import java.util.Locale
 import com.google.firebase.Timestamp
+import com.google.firebase.storage.FirebaseStorage
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -36,6 +41,8 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
     private var uid: String? = null
     private var emailPropio: String? = null
     private var emailCon: String? = null
+
+    private lateinit var bitmap: Bitmap // Declaración global del bitmap
 
     // Definimos la instancia de FirebaseFirestore para acceder a la base de datos Firestore
     private val db = FirebaseFirestore.getInstance()
@@ -67,6 +74,10 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         docRefHis.get().addOnSuccessListener { document ->
             val GrupoID = document.getString("GrupoID")
+            val nuevaPhoto = document.getString("photoUrl")
+            if (nuevaPhoto != null) {
+                cargarFotoEnMarker(nuevaPhoto)
+            }
             if (GrupoID != "-") {
                 grupoID = GrupoID!!
             }
@@ -122,6 +133,17 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
             }
         // Llamamos a la funcion para crear el mapa
         createMapFragment()
+    }
+
+    private fun cargarFotoEnMarker(photoUrl: String) {
+        val storageRef = FirebaseStorage.getInstance().getReferenceFromUrl(photoUrl)
+        val localFile = File.createTempFile("tempImage", "jpg")
+
+        storageRef.getFile(localFile).addOnSuccessListener {
+            bitmap = BitmapFactory.decodeFile(localFile.absolutePath) // Actualiza el bitmap global
+        }.addOnFailureListener {
+            Log.e(TAG, "Error al cargar la imagen: ${it.message}")
+        }
     }
 ///////////////////////////////////////////// FUNCIONES DEL MAPA ////////////////////////////////////////////////////
     private fun createMapFragment() {
@@ -203,7 +225,7 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
             // Opcional: agrega marcadores en cada punto
             for (i in latLngList.indices) {
                 val horaFormateada = convertirTimestamp(timestampList[i])
-                map.addMarker(MarkerOptions().position(latLngList[i]).title(horaFormateada))
+                map.addMarker(MarkerOptions().position(latLngList[i]).title(horaFormateada).icon(BitmapDescriptorFactory.fromBitmap(bitmap)))
             }
         }
     }

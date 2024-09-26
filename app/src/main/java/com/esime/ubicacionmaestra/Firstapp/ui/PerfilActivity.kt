@@ -1,20 +1,30 @@
 package com.esime.ubicacionmaestra.Firstapp.ui
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Bundle
 import android.text.method.PasswordTransformationMethod
 import android.util.Log
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.esime.ubicacionmaestra.R
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
+import com.google.firebase.storage.FirebaseStorage
+import java.io.ByteArrayOutputStream
 import kotlin.random.Random
 
 
@@ -26,13 +36,17 @@ class PerfilActivity : AppCompatActivity() {
     private lateinit var apellidosEditText: EditText
     private lateinit var telefonoEditText: EditText
 
+    private val PICK_IMAGE_REQUEST = 1
+    private lateinit var fileUri: Uri
+
     private var uid: String? = null
+    private var emailCon: String? = null
 
     // Declaracion del objeto para la base de datos
     private val db = FirebaseFirestore.getInstance()
 
     // Constantes para el tag de la actividad pra poder usar el LOGCAT
-    companion object{
+    companion object {
         const val TAG = "PerfilActivity"
     }
 
@@ -84,7 +98,7 @@ class PerfilActivity : AppCompatActivity() {
         // Aparecen muchas veces las declaraciones de los botones y asi pero es para que se muestren en los campos y puedas modificarlos directamente
 
         val bundle = intent.extras                              // recuperar parametros
-        val emailCon = bundle?.getString("Email1")              //parametro del home layut "como nombramos al edit text"
+        emailCon = bundle?.getString("Email1")              //parametro del home layut "como nombramos al edit text"
         uid = bundle?.getString("UID")
 
         IDGrupo.transformationMethod = PasswordTransformationMethod.getInstance()   // Para que el ID del grupo este oculto
@@ -123,7 +137,7 @@ class PerfilActivity : AppCompatActivity() {
                 val GrupoID = document.getString("GrupoID") // Guarda el ID del grupo del usuario actual
                 if (GrupoID == "-") {   // Si el ID del grupo del usuario actual es igual a "-" se la asigna un nuevo ID de grupo
                     val randomKey = generateRandomKey() // Genera un nuevo ID de grupo aleatorio
-                    db.collection("users").document(emailCon)
+                    db.collection("users").document(emailCon!!)
                         .update("GrupoID", randomKey)   // Actualiza el ID del grupo del usuario actual en la base de datos
                     IDGrupo.text = randomKey
                     PertenecerGrupo.text = "Pertenece al grupo"  // Cambia el texto del botón para indicar que el usuario pertenece al grupo
@@ -147,7 +161,7 @@ class PerfilActivity : AppCompatActivity() {
                 val GrupoID = document.getString("GrupoID") // Guarda el ID del grupo del usuario actual
                 if (GrupoID == "-") {   // Si el ID del grupo del usuario actual es igual a "-" desplegara el menu emergente para ingresar el ID del grupo
                     mostrarMenuEmergente { ID ->
-                        db.collection("users").document(emailCon).update("GrupoID", ID) // Actualiza el ID del grupo que ingreso en el menu emergente en la base de datos
+                        db.collection("users").document(emailCon!!).update("GrupoID", ID) // Actualiza el ID del grupo que ingreso en el menu emergente en la base de datos
                         PertenecerGrupo.text = "Pertenece al grupo" // Cambia el texto del botón para indicar que el usuario pertenece al grupo
                         IDGrupo.text = ID
 
@@ -200,7 +214,7 @@ class PerfilActivity : AppCompatActivity() {
                             }
                         }
                     }
-                    db.collection("users").document(emailCon).update("GrupoID", "-")    // Actualiza el ID del grupo a "-" (valor default que usamos para el ID del grupo) del usuario actual en la base de datos
+                    db.collection("users").document(emailCon!!).update("GrupoID", "-")    // Actualiza el ID del grupo a "-" (valor default que usamos para el ID del grupo) del usuario actual en la base de datos
                     PertenecerGrupo.text = "No perteneces a un grupo"   // Cambia el texto del botón para indicar que el usuario no pertenece al grupo
                     IDGrupo.text = "-"  // Cambia el ID del grupo del usuario actual a "-" (valor default que usamos para el ID del grupo)
                 }
@@ -226,8 +240,87 @@ class PerfilActivity : AppCompatActivity() {
         }
 
         saveButton.setOnClickListener {// Boton para guardar los datos del usuario
-            uploadProfileData(emailCon) // Funcion para guardar los datos del usuario en la base de datos
+            uploadProfileData(emailCon!!) // Funcion para guardar los datos del usuario en la base de datos
         }
+
+
+
+// En tu método onCreate
+        val btnSeleccionarFoto: Button = findViewById(R.id.btnSeleccionarFoto)
+        btnSeleccionarFoto.setOnClickListener {
+            val intent = Intent()
+            intent.type = "image/*"
+            intent.action = Intent.ACTION_GET_CONTENT
+            startActivityForResult(Intent.createChooser(intent, "Selecciona una imagen"), PICK_IMAGE_REQUEST)
+        }
+
+
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == PICK_IMAGE_REQUEST && resultCode == Activity.RESULT_OK && data != null) {
+            fileUri = data.data!!
+            val imageView: ImageView = findViewById(R.id.imageViewFoto)
+            imageView.setImageURI(fileUri)
+            subirFoto(fileUri)
+        }
+    }
+
+    private fun subirFoto(fileUri: Uri) {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid
+
+        Log.d(TAG, "Subiendo foto para el usuario $userId")
+
+        val storageRef = FirebaseStorage.getInstance().reference.child("fotos/${userId}.jpg")
+
+        // Redimensiona el bitmap antes de subir
+        val bitmap = redimensionarBitmap(fileUri)
+        val baos = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos) // Puedes ajustar el 80 para cambiar la calidad
+
+        val data = baos.toByteArray()
+        val uploadTask = storageRef.putBytes(data)
+        uploadTask.addOnSuccessListener {
+            storageRef.downloadUrl.addOnSuccessListener { uri ->
+                val photoUrl = uri.toString()
+                savePhotoUrlToFirestore(photoUrl)
+            }
+        }.addOnFailureListener {
+            Log.e(TAG, "Error al subir la foto: ${it.message}")
+        }
+    }
+
+    private fun redimensionarBitmap(uri: Uri): Bitmap {
+        val originalBitmap = BitmapFactory.decodeStream(contentResolver.openInputStream(uri))
+
+        // Define el tamaño máximo que deseas
+        val maxWidth = 150 // Ancho máximo
+        val maxHeight = 150 // Alto máximo
+
+        val width = originalBitmap.width
+        val height = originalBitmap.height
+        val scale = Math.min(maxWidth.toFloat() / width, maxHeight.toFloat() / height)
+
+        // Calcula el nuevo tamaño
+        val newWidth = (width * scale).toInt()
+        val newHeight = (height * scale).toInt()
+
+        // Crea el nuevo bitmap redimensionado
+        return Bitmap.createScaledBitmap(originalBitmap, newWidth, newHeight, true)
+    }
+
+    private fun savePhotoUrlToFirestore(photoUrl: String) {
+        val firestore = FirebaseFirestore.getInstance()
+        val data = hashMapOf("photoUrl" to photoUrl)
+
+        firestore.collection("users").document(emailCon!!)
+            .set(data, SetOptions.merge())
+            .addOnSuccessListener {
+                Log.d(TAG, "URL de la foto guardada exitosamente")
+            }.addOnFailureListener { e ->
+                Log.e(TAG, "Error al guardar la URL: $e")
+            }
     }
 
     // Funcion para mostrar el menu emergente para ingresar el ID del grupo
