@@ -5,11 +5,14 @@ import android.app.DatePickerDialog
 import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.DatePicker
 import android.widget.EditText
+import android.widget.Spinner
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.esime.ubicacionmaestra.Firstapp.ui.ConsultAppR.Companion
 import com.esime.ubicacionmaestra.R
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -30,6 +33,10 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
     // Definimos el objeto GoogleMap para usar el mapa
     private lateinit var map: GoogleMap
 
+    private var uid: String? = null
+    private var emailPropio: String? = null
+    private var emailCon: String? = null
+
     // Definimos la instancia de FirebaseFirestore para acceder a la base de datos Firestore
     private val db = FirebaseFirestore.getInstance()
 
@@ -37,7 +44,7 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
     private val TAG = "ViewLocationsActivity"
 
     // Funcion que se ejecuta al inicio de la activity
-    @SuppressLint("MissingInflatedId")
+    @SuppressLint("MissingInflatedId", "WrongViewCast")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_view_locations)
@@ -45,43 +52,74 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
         supportActionBar?.hide()    // Oculta la barra de acción
 
         val bundle = intent.extras
-        val email = bundle?.getString("Email")  // Obtiene el email del intent
+        emailPropio = bundle?.getString("Email")  // Obtiene el email del intent
+        uid = bundle?.getString("UID")
 
         // Inicializamos los elementos de la interfaz de usuario (Botones, EditText)
-        val ButtonHistorialUbicacion = findViewById<EditText>(R.id.eTHisUbicacion)
+        //val ButtonHistorialUbicacion = findViewById<EditText>(R.id.eTHisUbicacion)
+        val spinnerHisUbi = findViewById<Spinner>(R.id.emailHisSpinner)
         val selectDateButton = findViewById<Button>(R.id.selectDateButton)
 
+        var grupoID: String? = null
+        val docRefHis = db.collection("users").document(emailPropio!!)
+        val emailsList = mutableListOf<String>()
+        Log.i(TAG, emailPropio!!)
 
-        selectDateButton.setOnClickListener {   // Cuando se hace click en el boton de la seleccion de fecha
-            if(ButtonHistorialUbicacion.text.isNotEmpty()){ // Si el EditText no esta vacio
+        docRefHis.get().addOnSuccessListener { document ->
+            val GrupoID = document.getString("GrupoID")
+            if (GrupoID != "-") {
+                grupoID = GrupoID!!
+            }
 
+            Log.i(TAG,"GrupoID: $grupoID")
 
-                val docRef = db.collection("users").document(email!!)   // Obtiene el documento del email del usuario actual
-                val emailHisUbi = ButtonHistorialUbicacion.text.toString()
-                val docRef2 = db.collection("users").document(emailHisUbi)  // Obtiene el documento del email del usuario que se esta buscando
+            val docRef = db.collection("grupos").document(grupoID!!)
+            docRef.get().addOnSuccessListener { document1 ->
+                if (document1 != null && document1.exists()) {
 
-                docRef.get().addOnSuccessListener { document -> // Si el documento del usuario actual se obtiene
+                    emailsList.clear()
 
-                    val GroupIDPropio = document.getString("GrupoID")   // Guarda el GroupID del usuario actual
-
-                    docRef2.get().addOnSuccessListener { document2 ->   // Si el documento del usuario que se esta buscando se obtiene
-
-                        val GroupIDHis = document2.getString("GrupoID") // Guarda el GroupID del usuario que se esta buscando
-
-                        if(GroupIDPropio !="-" && GroupIDPropio == GroupIDHis){    // Comprueba que esten en el mismo grupo
-                            showDatePickerDialog(emailHisUbi)   // Muestra el Selector del dia
-                        }
-                        else{
-                            Toast.makeText(this, "El email ingresado es incorrecto o no pertenecen al mismo grupo!", Toast.LENGTH_LONG).show()
+                    for (field in document1.data?.keys.orEmpty()) {
+                        // Aquí asumimos que los campos son email1, email2, etc.
+                        val email = document1.getString(field)
+                        if (!email.isNullOrEmpty()) {
+                            emailsList.add(email)
                         }
                     }
-                }
-            }
-            else{
-                Toast.makeText(this, "Ingrese un email valido!", Toast.LENGTH_LONG).show()
-            }
 
+                    Log.i(TAG, "Correos disponibles: $emailsList")
+
+                    if (emailsList.isNotEmpty()) {
+                        // Configura el adaptador del Spinner
+                        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, emailsList)
+                        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                        spinnerHisUbi.adapter = adapter
+                    }else{
+                        Toast.makeText(this, "No hay correos disponibles", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    Toast.makeText(this, "No se encontró el grupo", Toast.LENGTH_SHORT).show()
+                }
+            }.addOnFailureListener { e ->
+                Log.w(TAG, "Error al obtener el documento", e)
+            }
         }
+
+
+            selectDateButton.setOnClickListener {   // Cuando se hace click en el boton de la seleccion de fecha
+
+                val emailUbiHist = spinnerHisUbi.selectedItem.toString() ?: ""
+                Log.i(TAG, "Email a consultar: $emailUbiHist")
+
+
+                if(emailUbiHist.isEmpty()){ // Si el EditText no esta vacio
+                    Toast.makeText(this, "Seleccione un email valido!", Toast.LENGTH_LONG).show()
+
+                }else{
+                    showDatePickerDialog(emailUbiHist)   // Muestra el Selector del dia
+                }
+
+            }
         // Llamamos a la funcion para crear el mapa
         createMapFragment()
     }

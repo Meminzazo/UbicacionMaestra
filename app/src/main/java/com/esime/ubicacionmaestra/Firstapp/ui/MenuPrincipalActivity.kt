@@ -138,6 +138,7 @@ class MenuPrincipalActivity : AppCompatActivity() {
         viewLocationsButton.setOnClickListener {
             val intent = Intent(this, ViewLocationsActivity::class.java).apply {
                 putExtra("Email", email)    // Pasamos el email al intent
+                putExtra("UID", uid)
             }
             startActivity(intent)   // Lanzamos la activity
         }
