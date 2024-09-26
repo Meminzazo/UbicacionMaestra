@@ -21,6 +21,10 @@ import com.google.android.gms.maps.model.PolylineOptions
 import com.google.firebase.firestore.FirebaseFirestore
 import java.util.Calendar
 import java.util.Locale
+import com.google.firebase.Timestamp
+import java.text.SimpleDateFormat
+import java.util.Date
+
 
 class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
     // Definimos el objeto GoogleMap para usar el mapa
@@ -122,16 +126,21 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
                 else{
                     val latLngList = mutableListOf<LatLng>()
+                    val timestampList = mutableListOf<Long>()
                     for (document in documents) {
                         val lat = document.getDouble("latitude")
                         val lng = document.getDouble("longitude")
-                        if (lat != null && lng != null) {
+                        val timestamp = document.getLong("timestamp")
+                        if (lat != null && lng != null && timestamp != null) {
                             latLngList.add(LatLng(lat, lng))
+
+                            timestampList.add(timestamp)
                             Log.d(TAG, "Ubicacion agregada: $lat, $lng")
+
                         }
                         Log.d(TAG, "Documento recuperado: $document")
                     }
-                    showLocationHistoryOnMap(latLngList)    // Muestra la ubicacion en el mapa
+                    showLocationHistoryOnMap(latLngList,timestampList)    // Muestra la ubicacion en el mapa
                 }
             }
             .addOnFailureListener { e ->
@@ -142,7 +151,7 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     // Funcion para mostrar las ubicaciones en el mapa
-    private fun showLocationHistoryOnMap(latLngList: List<LatLng>) {
+    private fun showLocationHistoryOnMap(latLngList: List<LatLng>, timestampList: MutableList<Long>) {
         map.clear() // Limpia el mapa antes de agregar la ruta
 
         if (latLngList.isNotEmpty()) {
@@ -154,9 +163,25 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
             map.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngList.first(), 15f))
 
             // Opcional: agrega marcadores en cada punto
-            for (latLng in latLngList) {
-                map.addMarker(MarkerOptions().position(latLng).title("Past Location"))
+            for (i in latLngList.indices) {
+                val horaFormateada = convertirTimestamp(timestampList[i])
+                map.addMarker(MarkerOptions().position(latLngList[i]).title(horaFormateada))
             }
+        }
+    }
+
+    private fun convertirTimestamp(timestamp: Long): String {
+        return try {
+            // Crea una instancia de Date usando el timestamp en milisegundos
+            val date = Date(timestamp)
+
+            // Define el formato de salida que será HH:mm:ss
+            val format = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+
+            // Retorna la fecha formateada
+            format.format(date)
+        } catch (e: Exception) {
+            "Hora no disponible" // En caso de error
         }
     }
 }
