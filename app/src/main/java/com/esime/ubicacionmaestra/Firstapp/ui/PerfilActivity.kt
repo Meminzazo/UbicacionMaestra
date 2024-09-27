@@ -41,6 +41,7 @@ class PerfilActivity : AppCompatActivity() {
 
     private var uid: String? = null
     private var emailCon: String? = null
+    private var GrupoIDPublic: String? = null
 
     // Declaracion del objeto para la base de datos
     private val db = FirebaseFirestore.getInstance()
@@ -109,6 +110,7 @@ class PerfilActivity : AppCompatActivity() {
             val GrupoID = document.getString("GrupoID") // Gurada el ID del usuario actual
             IDGrupo.text = GrupoID
             if (GrupoID != "-") {
+                GrupoIDPublic = GrupoID
                 PertenecerGrupo.text = "Pertenece al grupo" // Si tiene un ID de grupo cambia el texto a que si Pertence a un grupo
             }
             else{
@@ -146,7 +148,7 @@ class PerfilActivity : AppCompatActivity() {
                     val groupData = hashMapOf(
                         "email" to emailCon
                     )
-
+                    GrupoIDPublic = randomKey
                     db.collection("grupos").document(randomKey).set(groupData)
                 }
                 else{
@@ -166,6 +168,9 @@ class PerfilActivity : AppCompatActivity() {
                         IDGrupo.text = ID
 
                         val grupoRef = db.collection("grupos").document(ID)
+
+                        GrupoIDPublic = ID
+
                         grupoRef.get().addOnSuccessListener {grupoDocument ->
                             if (grupoDocument.exists()){
 
@@ -374,21 +379,19 @@ class PerfilActivity : AppCompatActivity() {
                 "Nombres" to nombres,
                 "Apellidos" to apellidos,
                 "Telefono" to telefono,
-                "Latitud" to "-",
-                "Longitud" to "-",
-                "GrupoID" to "-"
+                "GrupoID" to "$GrupoIDPublic"
             )
 
             // Conexion con la base de datos para guardar los datos del usuario
             db.collection("users").document(email)
-                .set(userData)
+                .update(userData as Map<String, Any>)
                 .addOnSuccessListener {
-                    Log.d("PerfilActivity", "Datos guardados exitosamente")
+                    Log.d(TAG, "Datos guardados exitosamente")
                     Toast.makeText(this, "Datos guardados exitosamente", Toast.LENGTH_SHORT).show()
                     onBackPressed()
                 }
                 .addOnFailureListener { e ->
-                    Log.w("PerfilActivity", "Error al guardar datos", e)
+                    Log.w(TAG, "Error al guardar datos", e)
                     Toast.makeText(this, "Error al guardar datos. Revise su conexión a internet y vuelva a intentarlo.", Toast.LENGTH_SHORT).show()
                 }
             }
