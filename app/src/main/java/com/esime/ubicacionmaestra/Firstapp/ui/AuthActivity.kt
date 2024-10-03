@@ -34,12 +34,11 @@ class AuthActivity : AppCompatActivity() {
     // Datos de la base de datos (Formato)
     val user = hashMapOf(
         "ID" to "-",
-        "Latitud" to "-",
-        "Longitud" to "-",
-        "Numero" to "-",
-        "Nombre" to "-",
-        "Apellido" to "-",
+        "Telefono" to null,
+        "Nombres" to null,
+        "Apellido" to null,
         "GrupoID" to "-",
+        "photoUrl" to null
     )
 
     data class UserUbi(
@@ -137,8 +136,6 @@ class AuthActivity : AppCompatActivity() {
         }
 
 
-
-
         // ACCIONES AL PULSAR LE BOTON DE INGRESAR
        loginButton.setOnClickListener()
         {
@@ -158,18 +155,7 @@ class AuthActivity : AppCompatActivity() {
                 }
             }
         }
-
-
-
-
-
-
-
     }
-
-
-
-
     // FUNCIONES AUXIALIARES EN CASO DE CUALQUIER ACCION ANTERIOR
     private fun showAlert()
     {

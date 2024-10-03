@@ -8,6 +8,13 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
+import android.graphics.Rect
+import android.graphics.RectF
 import android.net.Uri
 import android.os.Bundle
 import android.text.method.PasswordTransformationMethod
@@ -24,7 +31,9 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.storage.FirebaseStorage
+import com.yalantis.ucrop.UCrop
 import java.io.ByteArrayOutputStream
+import java.io.File
 import kotlin.random.Random
 
 
@@ -35,6 +44,9 @@ class PerfilActivity : AppCompatActivity() {
     private lateinit var nombresEditText: EditText
     private lateinit var apellidosEditText: EditText
     private lateinit var telefonoEditText: EditText
+    private lateinit var imageView: ImageView
+    private lateinit var bitmap: Bitmap // Declaración global del bitmap
+    private var resultUri: Uri? = null
 
     private val PICK_IMAGE_REQUEST = 1
     private lateinit var fileUri: Uri
@@ -88,6 +100,7 @@ class PerfilActivity : AppCompatActivity() {
         nombresEditText = findViewById(R.id.Nombres)
         apellidosEditText = findViewById(R.id.Apellidos)
         telefonoEditText = findViewById(R.id.NumTelefono)
+        imageView = findViewById(R.id.imageViewFoto)
 
         // Inicializar los elementos de la interfaz con los IDs correspondientes
         val JoinGrupoButton = findViewById<Button>(R.id.JoinGrupoButton)
@@ -108,8 +121,12 @@ class PerfilActivity : AppCompatActivity() {
         val docRef3 = db.collection("users").document(emailCon!!)
         docRef3.get().addOnSuccessListener { document ->    // Si se encuentra el documento se ejecuta el codigo dentro
             val GrupoID = document.getString("GrupoID") // Gurada el ID del usuario actual
+            val nuevaPhoto = document.getString("photoUrl")
             IDGrupo.text = GrupoID
             if (GrupoID != "-") {
+                if (nuevaPhoto != null){
+                    cargarFoto(nuevaPhoto)
+                }
                 GrupoIDPublic = GrupoID
                 PertenecerGrupo.text = "Pertenece al grupo" // Si tiene un ID de grupo cambia el texto a que si Pertence a un grupo
             }
@@ -146,7 +163,13 @@ class PerfilActivity : AppCompatActivity() {
 
                     // Datos de la base de datos (Formato)
                     val groupData = hashMapOf(
-                        "email" to emailCon
+                        "email1" to emailCon,
+                        "email2" to null,
+                        "email3" to null,
+                        "email4" to null,
+                        "email5" to null,
+                        "email6" to null,
+                        "email7" to null,
                     )
                     GrupoIDPublic = randomKey
                     db.collection("grupos").document(randomKey).set(groupData)
@@ -159,50 +182,59 @@ class PerfilActivity : AppCompatActivity() {
 
         JoinGrupoButton.setOnClickListener {    // Boton para unirse a un grupo
             val docRef = db.collection("users").document(emailCon!!)    // Se obtiene el documento del usuario actual
-            docRef.get().addOnSuccessListener { document -> // Si se encuentra el documento se ejecuta el codigo dentro
+            docRef.get().addOnSuccessListener { document -> // Si se encuentra el documento se ejecuta el código dentro
                 val GrupoID = document.getString("GrupoID") // Guarda el ID del grupo del usuario actual
-                if (GrupoID == "-") {   // Si el ID del grupo del usuario actual es igual a "-" desplegara el menu emergente para ingresar el ID del grupo
+                if (GrupoID == "-") {   // Si el ID del grupo del usuario actual es igual a "-" desplegará el menú emergente para ingresar el ID del grupo
                     mostrarMenuEmergente { ID ->
-                        db.collection("users").document(emailCon!!).update("GrupoID", ID) // Actualiza el ID del grupo que ingreso en el menu emergente en la base de datos
+                        db.collection("users").document(emailCon!!).update("GrupoID", ID) // Actualiza el ID del grupo que ingresó en el menú emergente en la base de datos
                         PertenecerGrupo.text = "Pertenece al grupo" // Cambia el texto del botón para indicar que el usuario pertenece al grupo
                         IDGrupo.text = ID
 
                         val grupoRef = db.collection("grupos").document(ID)
 
-                        GrupoIDPublic = ID
-
-                        grupoRef.get().addOnSuccessListener {grupoDocument ->
-                            if (grupoDocument.exists()){
-
-                                val emailCount = grupoDocument.data?.size ?: 0
-
-                                val newEmailField = "email${emailCount + 1}"
-
-                                grupoRef.update(newEmailField, emailCon)
+                        grupoRef.get().addOnSuccessListener { grupoDocument ->
+                            if (grupoDocument.exists()) {
+                                // Recorre los campos del grupo
+                                var campoDisponible: String? = null
+                                for (i in 2..7) {
+                                    val emailField = "email$i"
+                                    val emailValue = grupoDocument.getString(emailField)
+                                    if (emailValue == null) {
+                                        campoDisponible = emailField
+                                        break
+                                    }
+                                }
+                                if (campoDisponible != null) {
+                                    // Si hay un campo disponible, agrega el nuevo email
+                                    grupoRef.update(campoDisponible, emailCon)
+                                    Toast.makeText(this, "Te has unido al grupo", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    // Si no hay campos disponibles, muestra un mensaje
+                                    Toast.makeText(this, "El grupo está lleno", Toast.LENGTH_SHORT).show()
+                                }
                             }
                         }
                     }
-
-                }
-                else{
+                } else {
                     Toast.makeText(this, "Ya perteneces a un grupo, si quieres cambiar a otro grupo por favor salte del grupo actual", Toast.LENGTH_SHORT).show()
                 }
             }
         }
 
-        SalirGrupoButton.setOnClickListener {   // Boton para salir de un grupo
+
+        SalirGrupoButton.setOnClickListener {   // Botón para salir de un grupo
             val docRef = db.collection("users").document(emailCon!!)    // Se obtiene el documento del usuario actual
-            docRef.get().addOnSuccessListener { document -> // Si se encuentra el documento se ejecuta el codigo dentro
+            docRef.get().addOnSuccessListener { document -> // Si se encuentra el documento se ejecuta el código dentro
                 val GrupoID = document.getString("GrupoID") // Guarda el ID del grupo del usuario actual
-                if (GrupoID != "-") {   // Si el ID del grupo del usuario actual es diferente de "-" ejecuta el codigo dentro
+                if (GrupoID != "-") {   // Si el ID del grupo del usuario actual es diferente de "-" ejecuta el código dentro
 
                     val grupoRef = db.collection("grupos").document(GrupoID!!)
-                    grupoRef.get().addOnSuccessListener {grupoDocument ->
-                        if (grupoDocument.exists()){
+                    grupoRef.get().addOnSuccessListener { grupoDocument ->
+                        if (grupoDocument.exists()) {
                             val emailsMap = grupoDocument.data
                             var emailToRemove: String? = null
 
-
+                            // Busca el email del usuario en el grupo
                             for ((key, value) in emailsMap!!) {
                                 if (value == emailCon) {
                                     emailToRemove = key
@@ -211,23 +243,34 @@ class PerfilActivity : AppCompatActivity() {
                             }
 
                             if (emailToRemove != null) {
+                                // Actualiza el campo del email del grupo a null (remueve el email del usuario)
                                 grupoRef.update(emailToRemove, null).addOnSuccessListener {
-                                    Toast.makeText(this, "Has salido del grupo", Toast.LENGTH_SHORT).show()
+                                    // Actualiza el GrupoID del usuario a "-"
+                                    db.collection("users").document(emailCon!!).update("GrupoID", "-")
+                                        .addOnSuccessListener {
+                                            // Mensaje de éxito
+                                            Toast.makeText(this, "Has salido del grupo", Toast.LENGTH_SHORT).show()
+                                            PertenecerGrupo.text = "No perteneces a un grupo"   // Cambia el texto del botón para indicar que el usuario no pertenece a un grupo
+                                            IDGrupo.text = "-"  // Cambia el ID del grupo del usuario actual a "-"
+                                        }
+                                        .addOnFailureListener {
+                                            Toast.makeText(this, "Error al actualizar tu grupo", Toast.LENGTH_SHORT).show()
+                                        }
                                 }.addOnFailureListener {
                                     Toast.makeText(this, "Error al salir del grupo", Toast.LENGTH_SHORT).show()
                                 }
+                            } else {
+                                // Si no se encuentra el correo en el grupo
+                                Toast.makeText(this, "Tu correo no fue encontrado en el grupo", Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
-                    db.collection("users").document(emailCon!!).update("GrupoID", "-")    // Actualiza el ID del grupo a "-" (valor default que usamos para el ID del grupo) del usuario actual en la base de datos
-                    PertenecerGrupo.text = "No perteneces a un grupo"   // Cambia el texto del botón para indicar que el usuario no pertenece al grupo
-                    IDGrupo.text = "-"  // Cambia el ID del grupo del usuario actual a "-" (valor default que usamos para el ID del grupo)
-                }
-                else{
+                } else {
                     Toast.makeText(this, "No perteneces a un grupo", Toast.LENGTH_SHORT).show()
                 }
             }
         }
+
 
         // Obtener los datos del usuario de la base de datos y mostrarlos en los campos
         val docRef = db.collection("users").document(emailCon!!)
@@ -236,21 +279,28 @@ class PerfilActivity : AppCompatActivity() {
                 val nombres = document.getString("Nombres")
                 val apellidos = document.getString("Apellidos")
                 val telefono = document.getString("Telefono")
-                nombresEditText.setText(nombres)
-                apellidosEditText.setText(apellidos)
-                telefonoEditText.setText(telefono)
+                if (nombres != null){
+                    nombresEditText.setText(nombres)
+                }
+                if (apellidos != null){
+                    apellidosEditText.setText(apellidos)
+                }
+                if (telefono != null){
+                    telefonoEditText.setText(telefono)
+                }
             } else {
                 Log.d("PerfilActivity", "No se encontró el documento")
             }
         }
 
         saveButton.setOnClickListener {// Boton para guardar los datos del usuario
+            subirFoto(resultUri!!)
             uploadProfileData(emailCon!!) // Funcion para guardar los datos del usuario en la base de datos
+            super.onBackPressed()
         }
 
 
 
-// En tu método onCreate
         val btnSeleccionarFoto: Button = findViewById(R.id.btnSeleccionarFoto)
         btnSeleccionarFoto.setOnClickListener {
             val intent = Intent()
@@ -262,13 +312,43 @@ class PerfilActivity : AppCompatActivity() {
 
     }
 
+    private fun cargarFoto(photoUrl: String) {
+        val storageRef = FirebaseStorage.getInstance().getReferenceFromUrl(photoUrl)
+        val localFile = File.createTempFile("tempImage", "jpg")
+
+        storageRef.getFile(localFile).addOnSuccessListener {
+            bitmap = BitmapFactory.decodeFile(localFile.absolutePath) // Actualiza el bitmap global
+            imageView.setImageBitmap(bitmap)
+        }.addOnFailureListener {
+            Log.e(TAG, "Error al cargar la imagen: ${it.message}")
+        }
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == PICK_IMAGE_REQUEST && resultCode == Activity.RESULT_OK && data != null) {
             fileUri = data.data!!
-            val imageView: ImageView = findViewById(R.id.imageViewFoto)
-            imageView.setImageURI(fileUri)
-            subirFoto(fileUri)
+
+            val options = UCrop.Options()
+            options.setCircleDimmedLayer(true) // Esto crea el efecto de recorte circular
+            options.setShowCropFrame(false)    // Oculta el marco del recorte
+            options.setShowCropGrid(false)     // Oculta la cuadrícula de recorte
+
+            // Establece el URI de destino para guardar la imagen recortada
+            val destinationUri = Uri.fromFile(File(cacheDir, "tempImage.jpg"))
+
+            // Iniciar uCrop con opciones para el recorte circular
+            UCrop.of(fileUri, destinationUri)
+                .withAspectRatio(1f, 1f) // Para un recorte cuadrado (1:1)
+                .withMaxResultSize(150, 150) // Tamaño máximo del resultado
+                .withOptions(options)
+                .start(this)
+        }
+
+        // Manejar el resultado del recorte de uCrop
+        if (requestCode == UCrop.REQUEST_CROP && resultCode == Activity.RESULT_OK) {
+            resultUri = UCrop.getOutput(data!!)
+            imageView.setImageURI(resultUri) // Mostrar la imagen recortada
         }
     }
 
@@ -323,8 +403,10 @@ class PerfilActivity : AppCompatActivity() {
             .set(data, SetOptions.merge())
             .addOnSuccessListener {
                 Log.d(TAG, "URL de la foto guardada exitosamente")
+                Toast.makeText(this, "Foto guardada exitosamente", Toast.LENGTH_SHORT).show()
             }.addOnFailureListener { e ->
                 Log.e(TAG, "Error al guardar la URL: $e")
+                Toast.makeText(this, "Error al guardar Foto. Revise su conexión a internet y vuelva a intentarlo.", Toast.LENGTH_SHORT).show()
             }
     }
 

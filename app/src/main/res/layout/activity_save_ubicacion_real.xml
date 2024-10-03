@@ -18,27 +18,20 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/TimeReal"
-        />
+        app:layout_constraintTop_toBottomOf="@+id/textView2" />
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="30dp"
-        android:id="@+id/TimeReal"
-        android:background="@color/purple_200"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        />
+
 
     <TextView
         android:id="@+id/textView2"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Localizacion en tiempo real!"
-        android:textColor="@color/black"
-        android:textSize="20sp"
-        android:textStyle="bold"
+        android:textAlignment="center"
+        android:text="Ubicación en tiempo real"
+        android:textColor="@color/white"
+        android:background="@color/guinda"
+        android:textSize="25sp"
+        android:textStyle="bold|italic"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
@@ -48,10 +41,10 @@
         android:id="@+id/UbicacionReal"
         android:layout_width="wrap_content"
         android:layout_height="20dp"
+        app:layout_constraintBottom_toBottomOf="@+id/textView2"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        tools:ignore="UseSwitchCompatOrMaterialXml"
-        />
+        tools:ignore="UseSwitchCompatOrMaterialXml" />
 
     <Button
         android:id="@+id/AjustesButton"

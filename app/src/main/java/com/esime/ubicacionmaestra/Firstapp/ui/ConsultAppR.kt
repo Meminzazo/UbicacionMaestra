@@ -6,13 +6,22 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.Rect
 import android.location.Location
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.widget.ArrayAdapter
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.Spinner
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -51,8 +60,10 @@ import com.google.firebase.database.getValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.MetadataChanges
 import com.google.firebase.firestore.auth.User
+import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.io.File
 
 class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
     GoogleMap.OnMyLocationButtonClickListener, GoogleMap.OnMyLocationClickListener {
@@ -64,6 +75,14 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
     // Variables para almacenar los ValueEventListener
     private var geofenceListener: ValueEventListener? = null
     private var locationListener: ValueEventListener? = null
+
+    private lateinit var bitmap: Bitmap // Declaración global del bitmap
+    private lateinit var bitmap2: Bitmap // Declaración global del bitmap
+
+    private lateinit var nombre: String
+
+    private lateinit var photoPerfil: ImageView
+    private lateinit var nombresubi: TextView
 
     private var uid: String? = null
     private var emailPropio: String? = null
@@ -113,11 +132,11 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
 
         val spinnerUbi = findViewById<Spinner>(R.id.emailSpinner)
         val emailsList = mutableListOf<String>()
-
+        nombresubi = findViewById(R.id.NombreUsuario)
+        photoPerfil = findViewById(R.id.photoPerfil)
 
         // El mapa
         createFragment()
-
 
         var flag = false
         var grupoID: String? = null
@@ -136,134 +155,232 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                 grupoID = GrupoID!!
             }
 
-            Log.i(TAG,"GrupoID: $grupoID")
+            Log.i(TAG, "GrupoID: $grupoID")
 
-        val docRef = db.collection("grupos").document(grupoID!!)
-        docRef.get().addOnSuccessListener { document ->
-            if (document != null) {
-                for (field in document.data?.keys.orEmpty()) {
-                    // Aquí asumimos que los campos son email1, email2, etc.
-                    val email = document.getString(field)
-                    if (!email.isNullOrEmpty()) {
-                        emailsList.add(email)
+            val docRef = db.collection("grupos").document(grupoID!!)
+            docRef.get().addOnSuccessListener { document ->
+                if (document != null) {
+                    for (field in document.data?.keys.orEmpty()) {
+                        // Aquí asumimos que los campos son email1, email2, etc.
+                        val email = document.getString(field)
+                        if (!email.isNullOrEmpty()) {
+                            emailsList.add(email)
+                        }
+                    }
+
+                    // Configura el adaptador del Spinner
+                    val adapter =
+                        ArrayAdapter(this, android.R.layout.simple_spinner_item, emailsList)
+                    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                    spinnerUbi.adapter = adapter
+
+
+                } else {
+                    Toast.makeText(this, "No se encontró el grupo", Toast.LENGTH_SHORT).show()
+                }
+            }.addOnFailureListener { e ->
+                Log.w(TAG, "Error al obtener el documento", e)
+            }
+
+            // Cambio de estado del switch
+            switchConsultar.setOnCheckedChangeListener { _, isChecked ->
+
+                val emailUbi = spinnerUbi.selectedItem.toString()
+                Log.i(TAG, "Email a consultar: $emailUbi")
+                val docRef4 = db.collection("users").document(emailUbi)
+
+                docRef4.get().addOnSuccessListener { document4 ->
+                    val PhotoUrl = document4.getString("photoUrl")
+                    val nombre1 = document4.getString("Nombres")
+                    Log.i(TAG, "Nombre: $nombre1")
+                    Log.i(TAG, "PhotoUrl: $PhotoUrl")
+                    if (PhotoUrl != null) {
+                        cargarFoto(PhotoUrl)
+                    }
+                    if (nombre1 != null) {
+                        nombresubi.text = nombre1
+                        nombre = nombre1
                     }
                 }
+                if (emailUbi.isEmpty()) {
 
-                // Configura el adaptador del Spinner
-                val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, emailsList)
-                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                spinnerUbi.adapter = adapter
-
-
-
-            } else {
-                Toast.makeText(this, "No se encontró el grupo", Toast.LENGTH_SHORT).show()
-            }
-        }.addOnFailureListener { e ->
-            Log.w(TAG, "Error al obtener el documento", e)
-        }
-
-        // Cambio de estado del switch
-        switchConsultar.setOnCheckedChangeListener { _, isChecked ->
-
-            val emailUbi = spinnerUbi.selectedItem.toString()
-            Log.i(TAG, "Email a consultar: $emailUbi")
-
-            if (emailUbi.isEmpty()) {
-
-                Toast.makeText(this, "Ingresa una dirección de correo válida", Toast.LENGTH_LONG).show()
-                currentMarker?.remove()
-                switchConsultar.isChecked = false
+                    Toast.makeText(
+                        this,
+                        "Ingresa una dirección de correo válida",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    currentMarker?.remove()
+                    switchConsultar.isChecked = false
 
 
-            } else {
+                } else {
 
-                val docRef = db.collection("users").document(emailUbi)
+                    val docRef = db.collection("users").document(emailUbi)
 
-                docRef.get().addOnSuccessListener { document ->
+                    docRef.get().addOnSuccessListener { document ->
                         val UID = document.getString("ID")
 
-                            // Aquí se activa el listener cuando el switch está activado
-                            if (isChecked) {
-                                // Inicia la escucha de geovallas si no hay un listener activo
-                                if (geofenceListener == null) {
-                                    val postReference = database.child("users").child(UID!!).child("Geovallas")
-                                    geofenceListener = object : ValueEventListener {
-                                        override fun onDataChange(dataSnapshot: DataSnapshot) {
-                                            for (geovallaSnapshot in dataSnapshot.children) {
-                                                val nombre = geovallaSnapshot.child("name").getValue(String::class.java)
-                                                val latitud = geovallaSnapshot.child("latitud").getValue(String::class.java)?.toDoubleOrNull()
-                                                val longitud = geovallaSnapshot.child("longitud").getValue(String::class.java)?.toDoubleOrNull()
-                                                val radio = geovallaSnapshot.child("radius").getValue(String::class.java)?.toFloatOrNull()
-                                                val transitionType = geovallaSnapshot.child("transitionTypes").getValue(String::class.java)
+                        // Aquí se activa el listener cuando el switch está activado
+                        if (isChecked) {
+                            // Inicia la escucha de geovallas si no hay un listener activo
+                            if (geofenceListener == null) {
+                                val postReference =
+                                    database.child("users").child(UID!!).child("Geovallas")
+                                geofenceListener = object : ValueEventListener {
+                                    override fun onDataChange(dataSnapshot: DataSnapshot) {
+                                        for (geovallaSnapshot in dataSnapshot.children) {
+                                            val nombre = geovallaSnapshot.child("name")
+                                                .getValue(String::class.java)
+                                            val latitud = geovallaSnapshot.child("latitud")
+                                                .getValue(String::class.java)?.toDoubleOrNull()
+                                            val longitud = geovallaSnapshot.child("longitud")
+                                                .getValue(String::class.java)?.toDoubleOrNull()
+                                            val radio = geovallaSnapshot.child("radius")
+                                                .getValue(String::class.java)?.toFloatOrNull()
+                                            val transitionType =
+                                                geovallaSnapshot.child("transitionTypes")
+                                                    .getValue(String::class.java)
 
-                                                if (nombre != null && latitud != null && longitud != null && radio != null) {
-                                                    Log.i(TAG, "Geovalla: $nombre, Latitud: $latitud, Longitud: $longitud, Radio: $radio, Transition: $transitionType")
-                                                    //mostrarGeovalla(nombre, latitud, longitud, radio)
-                                                    Toast.makeText(this@ConsultAppR, "Geovalla: $nombre, Tipo de Transición: $transitionType", Toast.LENGTH_LONG).show()
-                                                }
+                                            if (nombre != null && latitud != null && longitud != null && radio != null) {
+                                                Log.i(
+                                                    TAG,
+                                                    "Geovalla: $nombre, Latitud: $latitud, Longitud: $longitud, Radio: $radio, Transition: $transitionType"
+                                                )
+                                                //mostrarGeovalla(nombre, latitud, longitud, radio)
+                                                Toast.makeText(
+                                                    this@ConsultAppR,
+                                                    "Geovalla: $nombre, Tipo de Transición: $transitionType",
+                                                    Toast.LENGTH_LONG
+                                                ).show()
                                             }
                                         }
-
-                                        override fun onCancelled(databaseError: DatabaseError) {
-                                            Log.w(TAG, "loadPost:onCancelled", databaseError.toException())
-                                        }
                                     }
-                                    postReference.addValueEventListener(geofenceListener!!)
-                                }
 
-                                if (locationListener == null) {
-                                    Log.i(TAG, "Si funciona el listener de ubicación con el ID: $UID")
-                                    val postReference1 = database.child("users").child(UID!!)
-                                    locationListener = object : ValueEventListener {
-                                        override fun onDataChange(dataSnapshot: DataSnapshot) {
-                                            val latitud = dataSnapshot.child("latitud").getValue(String::class.java)?.toDoubleOrNull()
-                                            val longitud = dataSnapshot.child("longitud").getValue(String::class.java)?.toDoubleOrNull()
-
-                                            if (latitud != null && longitud != null) {
-                                                Log.i(TAG, "Latitud: $latitud, Longitud: $longitud")
-                                                val coordinates = LatLng(latitud, longitud)
-                                                currentMarker?.remove()
-                                                currentMarker = map.addMarker(MarkerOptions().position(coordinates).title("Aprox").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)).flat(true))
-                                                map.animateCamera(CameraUpdateFactory.newLatLngZoom(coordinates, 18f), 5000, null)
-                                            } else {
-                                                Log.i(TAG, "Latitud y Longitud son nulos")
-                                            }
-                                        }
-
-                                        override fun onCancelled(databaseError: DatabaseError) {
-                                            Log.w(TAG, "loadPost:onCancelled", databaseError.toException())
-                                        }
+                                    override fun onCancelled(databaseError: DatabaseError) {
+                                        Log.w(
+                                            TAG,
+                                            "loadPost:onCancelled",
+                                            databaseError.toException()
+                                        )
                                     }
-                                    postReference1.addValueEventListener(locationListener!!)
-                                } else {
-                                    Log.i(TAG, "No funciona el listener de ubicación")
                                 }
-
-
-                            } else {
-                                // Si el switch está apagado, elimina los listeners
-                                geofenceListener?.let { listener ->
-                                    database.child("users").child(UID!!).child("Geovallas").removeEventListener(listener)
-                                    geofenceListener = null
-                                }
-
-                                locationListener?.let { listener ->
-                                    database.child(UID!!).removeEventListener(listener)
-                                    locationListener = null
-                                }
-
-                                currentMarker?.remove()
-                                switchConsultar.isChecked = false
+                                postReference.addValueEventListener(geofenceListener!!)
                             }
+
+                            if (locationListener == null) {
+                                Log.i(TAG, "Si funciona el listener de ubicación con el ID: $UID")
+                                val postReference1 = database.child("users").child(UID!!)
+                                locationListener = object : ValueEventListener {
+                                    override fun onDataChange(dataSnapshot: DataSnapshot) {
+                                        val latitud = dataSnapshot.child("latitud")
+                                            .getValue(String::class.java)?.toDoubleOrNull()
+                                        val longitud = dataSnapshot.child("longitud")
+                                            .getValue(String::class.java)?.toDoubleOrNull()
+
+                                        if (latitud != null && longitud != null) {
+                                            Log.i(TAG, "Latitud: $latitud, Longitud: $longitud")
+                                            val coordinates = LatLng(latitud, longitud)
+                                            if (nombre == null) {
+                                                nombre = "Sin Nombre"
+                                            }
+                                            currentMarker?.remove()
+
+                                            currentMarker = map.addMarker(
+                                                MarkerOptions().position(coordinates).title(nombre)
+                                                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)).flat(true)
+                                                    )
+                                            map.animateCamera(
+                                                CameraUpdateFactory.newLatLngZoom(
+                                                    coordinates,
+                                                    18f
+                                                ), 5000, null
+                                            )
+                                        } else {
+                                            Log.i(TAG, "Latitud y Longitud son nulos")
+                                        }
+                                    }
+
+                                    override fun onCancelled(databaseError: DatabaseError) {
+                                        Log.w(
+                                            TAG,
+                                            "loadPost:onCancelled",
+                                            databaseError.toException()
+                                        )
+                                    }
+                                }
+                                postReference1.addValueEventListener(locationListener!!)
+                            } else {
+                                Log.i(TAG, "No funciona el listener de ubicación")
+                            }
+
+
+                        } else {
+                            // Si el switch está apagado, elimina los listeners
+                            geofenceListener?.let { listener ->
+                                database.child("users").child(UID!!).child("Geovallas")
+                                    .removeEventListener(listener)
+                                geofenceListener = null
+                            }
+
+                            locationListener?.let { listener ->
+                                database.child(UID!!).removeEventListener(listener)
+                                locationListener = null
+                            }
+
+                            currentMarker?.remove()
+                            switchConsultar.isChecked = false
+                        }
 
                     }
                 }
 
 
-
+            }
         }
     }
+
+    private fun cargarFoto(photoUrl: String) {
+        val storageRef = FirebaseStorage.getInstance().getReferenceFromUrl(photoUrl)
+        val localFile = File.createTempFile("tempImage", "jpg")
+
+        storageRef.getFile(localFile).addOnSuccessListener {
+            bitmap = BitmapFactory.decodeFile(localFile.absolutePath) // Actualiza el bitmap global
+            photoPerfil.setImageBitmap(bitmap)
+        }.addOnFailureListener {
+            Log.e(PerfilActivity.TAG, "Error al cargar la imagen: ${it.message}")
+        }
+    }
+
+    // Función para crear un marcador personalizado
+    private fun createCustomMarker(bitmap: Bitmap): Bitmap {
+        val markerSize = 120 // Tamaño del marcador en píxeles
+        val markerBitmap = Bitmap.createBitmap(markerSize, markerSize, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(markerBitmap)
+        val paint = Paint()
+
+        // Dibuja el círculo de fondo del marker
+        paint.color = Color.WHITE
+        paint.isAntiAlias = true
+        canvas.drawCircle((markerSize / 2).toFloat(), (markerSize / 2).toFloat(), (markerSize / 2).toFloat(), paint)
+
+        // Recortar la imagen en forma circular
+        val roundedBitmap = Bitmap.createBitmap(markerSize, markerSize, Bitmap.Config.ARGB_8888)
+        val roundedCanvas = Canvas(roundedBitmap)
+        val path = Path()
+        path.addCircle((markerSize / 2).toFloat(), (markerSize / 2).toFloat(), (markerSize / 2).toFloat(), Path.Direction.CCW)
+        roundedCanvas.clipPath(path)
+
+        roundedCanvas.drawBitmap(
+            bitmap,
+            Rect(0, 0, bitmap.width, bitmap.height),
+            Rect(0, 0, markerSize, markerSize),
+            null
+        )
+
+        // Dibuja la imagen recortada en el centro del marcador
+        canvas.drawBitmap(roundedBitmap, 0f, 0f, null)
+
+        return markerBitmap
     }
 
     ////////////////////////////////// COSAS QUE HACEN QUE FUNCIONE EL MAPA ///////////////////////////////////////////////
@@ -288,17 +405,26 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
         mDatabase.child("users").child(uid!!).child("Geovallas").get()
             .addOnSuccessListener { snapshot ->
                 snapshot.children.forEach { geovalla ->
-                    val latitud = geovalla.child("latitud").getValue(String::class.java)?.toDoubleOrNull()
-                    val longitud = geovalla.child("longitud").getValue(String::class.java)?.toDoubleOrNull()
+                    val latitud =
+                        geovalla.child("latitud").getValue(String::class.java)?.toDoubleOrNull()
+                    val longitud =
+                        geovalla.child("longitud").getValue(String::class.java)?.toDoubleOrNull()
                     val nombre = geovalla.child("name").getValue(String::class.java)
-                    val radio = geovalla.child("radius").getValue(String::class.java)?.toFloatOrNull()
+                    val radio =
+                        geovalla.child("radius").getValue(String::class.java)?.toFloatOrNull()
 
                     // Verificar si alguno de los valores es nulo
                     if (latitud != null && longitud != null && nombre != null && radio != null) {
-                        Log.i(TAG, "Geovalla: $nombre, Latitud: $latitud, Longitud: $longitud, Radio: $radio")
+                        Log.i(
+                            TAG,
+                            "Geovalla: $nombre, Latitud: $latitud, Longitud: $longitud, Radio: $radio"
+                        )
                         mostrarGeovalla(nombre, latitud, longitud, radio)
                     } else {
-                        Log.w(TAG, "Geovalla incompleta: latitud: $latitud, longitud: $longitud, nombre: $nombre, radio: $radio")
+                        Log.w(
+                            TAG,
+                            "Geovalla incompleta: latitud: $latitud, longitud: $longitud, nombre: $nombre, radio: $radio"
+                        )
                     }
                 }
             }.addOnFailureListener {
@@ -307,7 +433,12 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
     }
 
 
-    private fun mostrarGeovalla(nombre: String?, latitud: Double?, longitud: Double?, radio: Float?) {
+    private fun mostrarGeovalla(
+        nombre: String?,
+        latitud: Double?,
+        longitud: Double?,
+        radio: Float?
+    ) {
         val circleOptions = CircleOptions()
             .center(LatLng(latitud!!, longitud!!))
             .radius(radio!!.toDouble())

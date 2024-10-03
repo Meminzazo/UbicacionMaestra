@@ -4,14 +4,20 @@ import android.annotation.SuppressLint
 import android.app.DatePickerDialog
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.Rect
 import android.os.Bundle
 import android.util.Log
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.DatePicker
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.Spinner
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.ConsultAppR.Companion
@@ -74,10 +80,7 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         docRefHis.get().addOnSuccessListener { document ->
             val GrupoID = document.getString("GrupoID")
-            val nuevaPhoto = document.getString("photoUrl")
-            if (nuevaPhoto != null) {
-                cargarFotoEnMarker(nuevaPhoto)
-            }
+
             if (GrupoID != "-") {
                 grupoID = GrupoID!!
             }
@@ -127,9 +130,16 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
                     Toast.makeText(this, "Seleccione un email valido!", Toast.LENGTH_LONG).show()
 
                 }else{
+                    val docRef = db.collection("users").document(emailUbiHist)
+                    docRef.get().addOnSuccessListener { document1 ->
+                        val nuevaPhoto = document1.getString("photoUrl")
+                        if (nuevaPhoto != null) {
+                            cargarFotoEnMarker(nuevaPhoto)
+                        }
+                    }
+
                     showDatePickerDialog(emailUbiHist)   // Muestra el Selector del dia
                 }
-
             }
         // Llamamos a la funcion para crear el mapa
         createMapFragment()
@@ -175,6 +185,12 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
     // Funcion para cargar las ubicaciones guardadas en la base de datos
     private fun loadLocationsForDate(date: String, emailhis: String?) {
 
+            val NombreView = findViewById<TextView>(R.id.NombreUsuario)
+
+            db.collection("users").document(emailhis!!).get().addOnSuccessListener {
+                NombreView.text = it.getString("Nombres")
+            }
+
             // Conexiona a la base de datos Firestore
             db.collection("users").document(emailhis!!).collection(date)
             .orderBy("timestamp")   // Ordena por fecha en orden ascendente deacuerdo con el timestamp
@@ -185,6 +201,9 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
                     return@addOnSuccessListener
                 }
                 else{
+                    val FotoPerfil = findViewById<ImageView>(R.id.PhotoPerfil)
+                    FotoPerfil.setImageBitmap(bitmap)
+                    bitmap = createCustomMarker(bitmap)
                     val latLngList = mutableListOf<LatLng>()
                     val timestampList = mutableListOf<Long>()
                     for (document in documents) {
@@ -244,4 +263,36 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
             "Hora no disponible" // En caso de error
         }
     }
+}
+
+// Función para crear un marcador personalizado
+private fun createCustomMarker(bitmap: Bitmap): Bitmap {
+    val markerSize = 120 // Tamaño del marcador en píxeles
+    val markerBitmap = Bitmap.createBitmap(markerSize, markerSize, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(markerBitmap)
+    val paint = Paint()
+
+    // Dibuja el círculo de fondo del marker
+    paint.color = Color.WHITE
+    paint.isAntiAlias = true
+    canvas.drawCircle((markerSize / 2).toFloat(), (markerSize / 2).toFloat(), (markerSize / 2).toFloat(), paint)
+
+    // Recortar la imagen en forma circular
+    val roundedBitmap = Bitmap.createBitmap(markerSize, markerSize, Bitmap.Config.ARGB_8888)
+    val roundedCanvas = Canvas(roundedBitmap)
+    val path = Path()
+    path.addCircle((markerSize / 2).toFloat(), (markerSize / 2).toFloat(), (markerSize / 2).toFloat(), Path.Direction.CCW)
+    roundedCanvas.clipPath(path)
+
+    roundedCanvas.drawBitmap(
+        bitmap,
+        Rect(0, 0, bitmap.width, bitmap.height),
+        Rect(0, 0, markerSize, markerSize),
+        null
+    )
+
+    // Dibuja la imagen recortada en el centro del marcador
+    canvas.drawBitmap(roundedBitmap, 0f, 0f, null)
+
+    return markerBitmap
 }
