@@ -294,7 +294,9 @@ class PerfilActivity : AppCompatActivity() {
         }
 
         saveButton.setOnClickListener {// Boton para guardar los datos del usuario
-            subirFoto(resultUri!!)
+            if(resultUri != null){
+                subirFoto(resultUri!!)
+            }
             uploadProfileData(emailCon!!) // Funcion para guardar los datos del usuario en la base de datos
             super.onBackPressed()
         }

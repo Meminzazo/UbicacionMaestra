@@ -9,7 +9,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="com.google.firebase.firestore.permission.READ" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
     <application
         android:allowBackup="true"
@@ -21,6 +21,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.UbicacionMaestra"
         tools:targetApi="31">
+        <activity
+            android:name=".Firstapp.ui.ConsultGroupAcivity"
+            android:exported="false" />
         <activity
             android:name=".Firstapp.ui.PerfilActivity"
             android:exported="false" />
@@ -37,8 +40,7 @@
 
         <receiver
             android:name=".Firstapp.ui.GeofenceBroadcastReceiver"
-            android:exported="false"
-            />
+            android:exported="false" />
 
         <activity
             android:name=".Firstapp.ui.ConsultAppR"
@@ -61,11 +63,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
