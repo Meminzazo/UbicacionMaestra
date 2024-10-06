@@ -196,7 +196,7 @@ class PerfilActivity : AppCompatActivity() {
                             if (grupoDocument.exists()) {
                                 // Recorre los campos del grupo
                                 var campoDisponible: String? = null
-                                for (i in 2..7) {
+                                for (i in 1..7) {
                                     val emailField = "email$i"
                                     val emailValue = grupoDocument.getString(emailField)
                                     if (emailValue == null) {
@@ -462,8 +462,7 @@ class PerfilActivity : AppCompatActivity() {
             val userData = hashMapOf(   // Formato para la base de datos
                 "Nombres" to nombres,
                 "Apellidos" to apellidos,
-                "Telefono" to telefono,
-                "GrupoID" to "$GrupoIDPublic"
+                "Telefono" to telefono
             )
 
             // Conexion con la base de datos para guardar los datos del usuario

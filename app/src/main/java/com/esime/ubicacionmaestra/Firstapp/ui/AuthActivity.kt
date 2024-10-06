@@ -37,7 +37,7 @@ class AuthActivity : AppCompatActivity() {
         "Email" to null,
         "Telefono" to null,
         "Nombres" to null,
-        "Apellido" to null,
+        "Apellidos" to null,
         "GrupoID" to "-",
         "photoUrl" to null
     )
@@ -183,8 +183,8 @@ class AuthActivity : AppCompatActivity() {
             .addOnSuccessListener { Log.d(HomeActivity.TAG, "Documento creado exitosamente") }
             .addOnFailureListener { e -> Log.w(HomeActivity.TAG, "Error al crear el documento", e) }
 
-        db.collection("users").document(email).update("ID", UID)
-        db.collection("users").document(email).update("Email", email)
+        db.collection("users").document(UID).update("ID", UID)
+        db.collection("users").document(UID).update("Email", email)
 
         database = FirebaseDatabase.getInstance().reference
 
