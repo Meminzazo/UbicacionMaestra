@@ -5,11 +5,8 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:padding="16dp"
     tools:context=".Firstapp.ui.MenuPrincipalActivity">
-
-    <!-- ImageView para mostrar el icono del clima -->
-
-    <!-- TextView para mostrar el clima -->
 
     <ImageView
         android:id="@+id/imageViewWeatherIcon"
@@ -17,7 +14,6 @@
         android:layout_height="80dp"
         app:layout_constraintBottom_toTopOf="@+id/saveUbi"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.532"
         app:layout_constraintStart_toEndOf="@+id/textViewWeather"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -34,7 +30,7 @@
         app:layout_constraintBottom_toTopOf="@+id/saveUbi"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.697" />
+    />
 
     <Button
         android:id="@+id/consultButton"
@@ -54,7 +50,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        tools:ignore="MissingConstraints" />
+    />
 
     <Button
         android:id="@+id/viewsLocationsButton"
@@ -64,6 +60,16 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/consultButton" />
+
+    <Button
+        android:id="@+id/consultUbiGroup"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:text="Consulta de ubicacion grupal"
+        android:textColor="@color/white"
+        app:layout_constraintTop_toBottomOf="@+id/viewsLocationsButton" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

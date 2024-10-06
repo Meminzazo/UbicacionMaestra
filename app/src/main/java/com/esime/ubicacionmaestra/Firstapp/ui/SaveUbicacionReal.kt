@@ -91,8 +91,10 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
 
         supportActionBar?.hide()
         val bundle = intent.extras
-        val email = bundle?.getString("Email")
+        //val email = bundle?.getString("Email")
         uid = bundle?.getString("UID")
+
+        Log.d(TAG, "UID: $uid")
 
         createFragment()
 
@@ -111,7 +113,7 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
                 Log.d(TAG, "Switch activo")
                 val intent = Intent(this, UbicacionGuardarService::class.java).apply {
                     putExtra("Flag", true)
-                    putExtra("Email", email)
+                    //putExtra("Email", email)
                     putExtra("UID", uid)
                 }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){

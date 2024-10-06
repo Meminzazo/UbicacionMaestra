@@ -34,6 +34,7 @@ class AuthActivity : AppCompatActivity() {
     // Datos de la base de datos (Formato)
     val user = hashMapOf(
         "ID" to "-",
+        "Email" to null,
         "Telefono" to null,
         "Nombres" to null,
         "Apellido" to null,
@@ -119,7 +120,7 @@ class AuthActivity : AppCompatActivity() {
 
                             showHome(
                                 it.result?.user?.email ?: "",
-                                ProviderType.BASIC
+                                ProviderType.CORREO_ELECTRONICO
                             )   //en caso de no existir email manda un vacio, si no da error
                         } else  //alerta de que ha pasado algo si no ...
                         {
@@ -146,7 +147,7 @@ class AuthActivity : AppCompatActivity() {
                 {
                     if (it.isSuccessful) //si la operacion se completa correctamente ...
                     {
-                        showHome(it.result?.user?.email?:"", ProviderType.BASIC)   //en caso de no existir email manda un vacio, si no da error
+                        showHome(it.result?.user?.email?:"", ProviderType.CORREO_ELECTRONICO)   //en caso de no existir email manda un vacio, si no da error
                     }
                     else  //alerta de que ha pasado algo si no ...
                     {
@@ -177,12 +178,13 @@ class AuthActivity : AppCompatActivity() {
     }
 
     fun crearcolletion(email: String, UID: String){
-        db.collection("users").document(email)
+        db.collection("users").document(UID)
             .set(user)
             .addOnSuccessListener { Log.d(HomeActivity.TAG, "Documento creado exitosamente") }
             .addOnFailureListener { e -> Log.w(HomeActivity.TAG, "Error al crear el documento", e) }
 
         db.collection("users").document(email).update("ID", UID)
+        db.collection("users").document(email).update("Email", email)
 
         database = FirebaseDatabase.getInstance().reference
 

@@ -59,13 +59,13 @@ class UbicacionGuardarService : Service() {
     // Función con la que empieza el como onCreate de una activity
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val bundle = intent?.extras
-        val email = bundle?.getString("Email")  // Obtén el valor de email del intent
+        //val email = bundle?.getString("Email")  // Obtén el valor de email del intent
         val uid = bundle?.getString("UID")
         val shouldTrackLocation = bundle?.getBoolean("Flag") ?: false   // Obtén el valor de shouldTrackLocation del intent para el While
 
-        if (shouldTrackLocation && email != null) { // Verifica si shouldTrackLocation es true y si email no es nulo para el while
+        if (shouldTrackLocation && uid != null) { // Verifica si shouldTrackLocation es true y si email no es nulo para el while
             startForeground(1, createNotification())    // Crea la notificación para el servicio en segundo plano
-            startLocationTraking(email, uid) // Inicia la corrutina para la consulta de ubicación
+            startLocationTraking(uid) // Inicia la corrutina para la consulta de ubicación
         }
         else{
             stopLocationTraking()   // Si shouldTrackLocation es false, detiene la corrutina y detiene el servicio en segundo plano
@@ -81,14 +81,14 @@ class UbicacionGuardarService : Service() {
     }
 
     // Función para iniciar el servicio
-    private fun startLocationTraking(email: String, uid: String?) {
+    private fun startLocationTraking(uid: String?) {
         serviceJob = serviceScope.launch {  // Inicia la corrutina del servicio
             while (isActive) {  // Mientras la corrutina esté activa
                 val result = locationService.getUserLocation(this@UbicacionGuardarService)  // Obtiene la ubicación del usuario de la LocationService
                 if (result != null) {   // Verifica si la ubicación no es nula
 
                     //Función cuando obtienes una nueva ubicación
-                    saveLocation(email, result.latitude, result.longitude)
+                    saveLocation(uid!!, result.latitude, result.longitude)
 
                     database = Firebase.database.reference
 
@@ -102,22 +102,13 @@ class UbicacionGuardarService : Service() {
                         "longitud" to result?.longitude.toString()
                     )).addOnSuccessListener {
                         // Aquí puedes manejar lo que suceda después de una actualización exitosa
-                        Log.d("Update", "Latitud y longitud actualizadas correctamente")
+                        Log.d(TAG, "Latitud y longitud actualizadas correctamente")
                     }.addOnFailureListener {
                         // Aquí puedes manejar lo que suceda si falla la actualización
-                        Log.e("Update", "Error al actualizar latitud y longitud", it)
+                        Log.e(TAG, "Error al actualizar latitud y longitud", it)
                     }
-
-
-                    //Actualizar la ubicación en la base de datos
-//                    db.collection("users").document("$email").update(
-//                        mapOf(  // Actualiza los datos en la base de datos en un arreglo de esta forma
-//                            "Latitud" to "${result?.latitude}",
-//                            "Longitud" to "${result?.longitude}"
-//                        )
-//                    )
                 }
-                delay(5000)    // Espera 30 segundos antes de la próxima consulta de ubicación
+                delay(15000)    // Espera 30 segundos antes de la próxima consulta de ubicación
             }
         }
     }
@@ -160,7 +151,7 @@ class UbicacionGuardarService : Service() {
     }
 
     // Funcion para guardar el historial de ubicación en la base de datos en un documento con la fecha de cuando se esta guardando
-    fun saveLocation(email: String, latitude: Double, longitude: Double) {
+    fun saveLocation(uid: String, latitude: Double, longitude: Double) {
         val currentDate = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(Date())
         val locationData = hashMapOf(   // Datos a guardar en la base de datos con ese formato
             "latitude" to latitude,
@@ -169,10 +160,11 @@ class UbicacionGuardarService : Service() {
         )
 
         // Conexion con la base dde datos para que se guarden
-        db.collection("users").document(email).collection(currentDate)
+        db.collection("users").document(uid).collection(currentDate)
             .add(locationData)
             .addOnSuccessListener {
                 Log.d(TAG, "Location successfully saved!")
+                Log.d(TAG, "Location: $latitude, $longitude")
             }
             .addOnFailureListener { e ->
                 Log.w(TAG, "Error saving location", e)

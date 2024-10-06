@@ -45,7 +45,7 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var map: GoogleMap
 
     private var uid: String? = null
-    private var emailPropio: String? = null
+    //private var emailPropio: String? = null
     private var emailCon: String? = null
 
     private lateinit var bitmap: Bitmap // Declaración global del bitmap
@@ -65,7 +65,7 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
         supportActionBar?.hide()    // Oculta la barra de acción
 
         val bundle = intent.extras
-        emailPropio = bundle?.getString("Email")  // Obtiene el email del intent
+        //emailPropio = bundle?.getString("Email")  // Obtiene el email del intent
         uid = bundle?.getString("UID")
 
         // Inicializamos los elementos de la interfaz de usuario (Botones, EditText)
@@ -74,9 +74,9 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
         val selectDateButton = findViewById<Button>(R.id.selectDateButton)
 
         var grupoID: String? = null
-        val docRefHis = db.collection("users").document(emailPropio!!)
+        val docRefHis = db.collection("users").document(uid!!)
         val emailsList = mutableListOf<String>()
-        Log.i(TAG, emailPropio!!)
+        //Log.i(TAG, emailPropio!!)
 
         docRefHis.get().addOnSuccessListener { document ->
             val GrupoID = document.getString("GrupoID")

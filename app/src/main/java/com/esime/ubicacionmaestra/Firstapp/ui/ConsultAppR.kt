@@ -85,7 +85,9 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
     private lateinit var nombresubi: TextView
 
     private var uid: String? = null
-    private var emailPropio: String? = null
+    private var uidToConsult: String? = null
+
+    //private var emailPropio: String? = null
     private var emailCon: String? = null
 
 
@@ -107,13 +109,12 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_consult_app_r)
-        enableEdgeToEdge()
         supportActionBar?.hide()
 
 
         // Obtener el email del intent
         val bundle = intent.extras
-        emailPropio = bundle?.getString("Email")
+        //emailPropio = bundle?.getString("Email")
         uid = bundle?.getString("UID")
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
@@ -125,29 +126,24 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
         // Obtener referencias a los elementos de la interfaz de usuario (botones,EditText,etc)
         val switchConsultar =
             findViewById<SwitchMaterial>(R.id.ConsultarUbicacion) as SwitchMaterial
-        val sharedPrefs =
-            getSharedPreferences(MenuPrincipalActivity.PREFS_NAME, Context.MODE_PRIVATE)
-        switchConsultar.isChecked =
-            sharedPrefs.getBoolean(MenuPrincipalActivity.SWITCH_STATE, false)
 
         val spinnerUbi = findViewById<Spinner>(R.id.emailSpinner)
-        val emailsList = mutableListOf<String>()
+        val uidList = mutableListOf<String>()
         nombresubi = findViewById(R.id.NombreUsuario)
         photoPerfil = findViewById(R.id.photoPerfil)
 
         // El mapa
         createFragment()
 
-        var flag = false
         var grupoID: String? = null
 
         geofencingClient = LocationServices.getGeofencingClient(this)
         database = FirebaseDatabase.getInstance().reference
 
 
-        val docRef2 = db.collection("users").document(emailPropio!!)
+        val docRef2 = db.collection("users").document(uid!!)
 
-        Log.i(TAG, emailPropio!!)
+        //Log.i(TAG, emailPropio!!)
 
         docRef2.get().addOnSuccessListener { document ->
             val GrupoID = document.getString("GrupoID")
@@ -162,15 +158,15 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                 if (document != null) {
                     for (field in document.data?.keys.orEmpty()) {
                         // Aquí asumimos que los campos son email1, email2, etc.
-                        val email = document.getString(field)
-                        if (!email.isNullOrEmpty()) {
-                            emailsList.add(email)
+                        val uid = document.getString(field)
+                        if (!uid.isNullOrEmpty()) {
+                            uidList.add(uid)
                         }
                     }
 
                     // Configura el adaptador del Spinner
                     val adapter =
-                        ArrayAdapter(this, android.R.layout.simple_spinner_item, emailsList)
+                        ArrayAdapter(this, android.R.layout.simple_spinner_item, uidList)
                     adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
                     spinnerUbi.adapter = adapter
 
@@ -185,9 +181,10 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
             // Cambio de estado del switch
             switchConsultar.setOnCheckedChangeListener { _, isChecked ->
 
-                val emailUbi = spinnerUbi.selectedItem.toString()
-                Log.i(TAG, "Email a consultar: $emailUbi")
-                val docRef4 = db.collection("users").document(emailUbi)
+                uidToConsult = spinnerUbi.selectedItem.toString()
+                Log.i(TAG, "UID a consultar: $uidToConsult")
+
+                val docRef4 = db.collection("users").document(uidToConsult!!)
 
                 docRef4.get().addOnSuccessListener { document4 ->
                     val PhotoUrl = document4.getString("photoUrl")
@@ -202,7 +199,7 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                         nombre = nombre1
                     }
                 }
-                if (emailUbi.isEmpty()) {
+                if (uidToConsult!!.isEmpty()) {
 
                     Toast.makeText(
                         this,
@@ -214,18 +211,12 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
 
 
                 } else {
-
-                    val docRef = db.collection("users").document(emailUbi)
-
-                    docRef.get().addOnSuccessListener { document ->
-                        val UID = document.getString("ID")
-
                         // Aquí se activa el listener cuando el switch está activado
                         if (isChecked) {
                             // Inicia la escucha de geovallas si no hay un listener activo
                             if (geofenceListener == null) {
                                 val postReference =
-                                    database.child("users").child(UID!!).child("Geovallas")
+                                    database.child("users").child(uidToConsult!!).child("Geovallas")
                                 geofenceListener = object : ValueEventListener {
                                     override fun onDataChange(dataSnapshot: DataSnapshot) {
                                         for (geovallaSnapshot in dataSnapshot.children) {
@@ -268,8 +259,8 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                             }
 
                             if (locationListener == null) {
-                                Log.i(TAG, "Si funciona el listener de ubicación con el ID: $UID")
-                                val postReference1 = database.child("users").child(UID!!)
+                                Log.i(TAG, "Si funciona el listener de ubicación con el ID: $uidToConsult")
+                                val postReference1 = database.child("users").child(uidToConsult!!)
                                 locationListener = object : ValueEventListener {
                                     override fun onDataChange(dataSnapshot: DataSnapshot) {
                                         val latitud = dataSnapshot.child("latitud")
@@ -317,13 +308,13 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                         } else {
                             // Si el switch está apagado, elimina los listeners
                             geofenceListener?.let { listener ->
-                                database.child("users").child(UID!!).child("Geovallas")
+                                database.child("users").child(uidToConsult!!).child("Geovallas")
                                     .removeEventListener(listener)
                                 geofenceListener = null
                             }
 
                             locationListener?.let { listener ->
-                                database.child(UID!!).removeEventListener(listener)
+                                database.child(uidToConsult!!).removeEventListener(listener)
                                 locationListener = null
                             }
 
@@ -331,7 +322,7 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                             switchConsultar.isChecked = false
                         }
 
-                    }
+
                 }
 
 

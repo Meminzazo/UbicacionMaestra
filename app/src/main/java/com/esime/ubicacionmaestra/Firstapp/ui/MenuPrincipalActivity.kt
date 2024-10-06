@@ -77,8 +77,6 @@ private lateinit var database: DatabaseReference
 
 class MenuPrincipalActivity : AppCompatActivity() {
 
-    val db = FirebaseFirestore.getInstance()
-
     val TAG = "MenuPrincipalActivity"
 
     companion object {
@@ -93,7 +91,9 @@ class MenuPrincipalActivity : AppCompatActivity() {
     @SuppressLint("MissingInflatedId", "LongLogTag")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+
+        // Aquí se llama a la función para obtener el clima
+        fetchWeather()
 
         supportActionBar?.hide()    // Oculta la barra de título
 
@@ -113,6 +113,7 @@ class MenuPrincipalActivity : AppCompatActivity() {
         val consultButton = findViewById<Button>(R.id.consultButton)
         val saveUbi = findViewById<Button>(R.id.saveUbi)
         val viewLocationsButton = findViewById<Button>(R.id.viewsLocationsButton)
+        val consultGruopButton = findViewById<Button>(R.id.consultUbiGroup)
 
         database = Firebase.database.reference
 
@@ -143,8 +144,14 @@ class MenuPrincipalActivity : AppCompatActivity() {
             startActivity(intent)   // Lanzamos la activity
         }
 
-        // Aquí se llama a la función para obtener el clima
-        fetchWeather()
+        consultGruopButton.setOnClickListener {
+            val intent = Intent(this, ConsultGroupAcivity::class.java).apply {
+                putExtra("Email", email)    // Pasamos el email al intent
+                putExtra("UID", uid)
+            }
+            startActivity(intent)   // Lanzamos la activity
+        }
+
     }
 
     // Función para obtener la ubicación actual (dummy para ejemplificar)
