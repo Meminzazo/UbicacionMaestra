@@ -1,4 +1,4 @@
-package com.esime.ubicacionmaestra.Firstapp.ui
+package com.esime.ubicacionmaestra.Firstapp.ui.saveLocation
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -22,6 +22,10 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.esime.ubicacionmaestra.Firstapp.ui.home.MenuPrincipalActivity
+import com.esime.ubicacionmaestra.Firstapp.ui.consult1To1.ConsultAppR
+import com.esime.ubicacionmaestra.Firstapp.ui.utilities.GeofenceBroadcastReceiver
+import com.esime.ubicacionmaestra.Firstapp.ui.utilities.UbicacionGuardarService
 import com.esime.ubicacionmaestra.R
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.location.Geofence

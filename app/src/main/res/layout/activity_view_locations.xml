@@ -5,7 +5,7 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".Firstapp.ui.ViewLocationsActivity">
+    tools:context=".Firstapp.ui.historicLocation.ViewLocationsActivity">
 
     <Button
         android:id="@+id/selectDateButton"

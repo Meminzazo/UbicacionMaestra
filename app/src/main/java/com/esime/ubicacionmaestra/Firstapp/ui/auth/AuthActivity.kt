@@ -1,4 +1,4 @@
-package com.esime.ubicacionmaestra.Firstapp.ui
+package com.esime.ubicacionmaestra.Firstapp.ui.auth
 
 import android.annotation.SuppressLint
 import android.content.Intent
@@ -12,6 +12,8 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.esime.ubicacionmaestra.Firstapp.ui.home.HomeActivity
+import com.esime.ubicacionmaestra.Firstapp.ui.home.ProviderType
 import com.esime.ubicacionmaestra.R
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DatabaseReference
@@ -33,7 +35,6 @@ class AuthActivity : AppCompatActivity() {
     }
     // Datos de la base de datos (Formato)
     val user = hashMapOf(
-        "ID" to "-",
         "Email" to null,
         "Telefono" to null,
         "Nombres" to null,
@@ -138,8 +139,7 @@ class AuthActivity : AppCompatActivity() {
 
 
         // ACCIONES AL PULSAR LE BOTON DE INGRESAR
-       loginButton.setOnClickListener()
-        {
+       loginButton.setOnClickListener(){
             if(emailEditText.text.isNotEmpty() && passEditText.text.isNotEmpty())           //comprueba si los campos son vacios
             {
                 FirebaseAuth.getInstance().signInWithEmailAndPassword(emailEditText.text.toString(),        //ahora ingresa
@@ -158,8 +158,7 @@ class AuthActivity : AppCompatActivity() {
         }
     }
     // FUNCIONES AUXIALIARES EN CASO DE CUALQUIER ACCION ANTERIOR
-    private fun showAlert()
-    {
+    private fun showAlert(){
         val builder = AlertDialog.Builder(this)
         builder.setTitle("¡Error O_O!")
         builder.setMessage("Se ha producido un erro de autenticacion al usuario X_X")
@@ -168,8 +167,7 @@ class AuthActivity : AppCompatActivity() {
         dialog.show()
     }
 
-    private fun showHome (email: String, provider: ProviderType)
-    {
+    private fun showHome (email: String, provider: ProviderType){
         val homeIntent = Intent (this, HomeActivity::class.java).apply {
             putExtra("Email", email)
             putExtra("provider", provider.name)
@@ -183,7 +181,6 @@ class AuthActivity : AppCompatActivity() {
             .addOnSuccessListener { Log.d(HomeActivity.TAG, "Documento creado exitosamente") }
             .addOnFailureListener { e -> Log.w(HomeActivity.TAG, "Error al crear el documento", e) }
 
-        db.collection("users").document(UID).update("ID", UID)
         db.collection("users").document(UID).update("Email", email)
 
         database = FirebaseDatabase.getInstance().reference

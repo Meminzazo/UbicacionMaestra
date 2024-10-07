@@ -22,40 +22,40 @@
         android:theme="@style/Theme.UbicacionMaestra"
         tools:targetApi="31">
         <activity
-            android:name=".Firstapp.ui.ConsultGroupAcivity"
+            android:name=".Firstapp.ui.consultGroup.ConsultGroupAcivity"
             android:exported="false" />
         <activity
-            android:name=".Firstapp.ui.PerfilActivity"
+            android:name=".Firstapp.ui.profile.PerfilActivity"
             android:exported="false" />
         <activity
-            android:name=".Firstapp.ui.ViewLocationsActivity"
+            android:name=".Firstapp.ui.historicLocation.ViewLocationsActivity"
             android:exported="false" />
 
         <service
-            android:name=".Firstapp.ui.UbicacionGuardarService"
+            android:name=".Firstapp.ui.utilities.UbicacionGuardarService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="location"
             tools:ignore="ForegroundServicePermission" />
 
         <receiver
-            android:name=".Firstapp.ui.GeofenceBroadcastReceiver"
+            android:name=".Firstapp.ui.utilities.GeofenceBroadcastReceiver"
             android:exported="false" />
 
         <activity
-            android:name=".Firstapp.ui.ConsultAppR"
+            android:name=".Firstapp.ui.consult1To1.ConsultAppR"
             android:exported="false" />
         <activity
-            android:name=".Firstapp.ui.SaveUbicacionReal"
+            android:name=".Firstapp.ui.saveLocation.SaveUbicacionReal"
             android:exported="false" />
         <activity
-            android:name=".Firstapp.ui.MenuPrincipalActivity"
+            android:name=".Firstapp.ui.home.MenuPrincipalActivity"
             android:exported="false" />
         <activity
-            android:name=".Firstapp.ui.HomeActivity"
+            android:name=".Firstapp.ui.home.HomeActivity"
             android:exported="false" />
         <activity
-            android:name=".Firstapp.ui.AuthActivity"
+            android:name=".Firstapp.ui.auth.AuthActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

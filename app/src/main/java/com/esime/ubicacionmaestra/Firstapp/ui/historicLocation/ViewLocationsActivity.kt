@@ -1,4 +1,4 @@
-package com.esime.ubicacionmaestra.Firstapp.ui
+package com.esime.ubicacionmaestra.Firstapp.ui.historicLocation
 
 import android.annotation.SuppressLint
 import android.app.DatePickerDialog
@@ -14,13 +14,11 @@ import android.util.Log
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.DatePicker
-import android.widget.EditText
 import android.widget.ImageView
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.esime.ubicacionmaestra.Firstapp.ui.ConsultAppR.Companion
 import com.esime.ubicacionmaestra.R
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -33,7 +31,6 @@ import com.google.android.gms.maps.model.PolylineOptions
 import com.google.firebase.firestore.FirebaseFirestore
 import java.util.Calendar
 import java.util.Locale
-import com.google.firebase.Timestamp
 import com.google.firebase.storage.FirebaseStorage
 import java.io.File
 import java.text.SimpleDateFormat

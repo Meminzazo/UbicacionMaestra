@@ -1,21 +1,22 @@
-package com.esime.ubicacionmaestra.Firstapp.ui
+package com.esime.ubicacionmaestra.Firstapp.ui.consultGroup
 
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.location.Location
 import android.os.Bundle
 import android.util.Log
+import android.widget.ImageView
 import android.widget.Toast
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import com.esime.ubicacionmaestra.Firstapp.ui.ConsultAppR.Companion
+import com.esime.ubicacionmaestra.Firstapp.ui.home.MenuPrincipalActivity
 import com.esime.ubicacionmaestra.R
-import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
@@ -31,6 +32,8 @@ import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.FirebaseStorage
+import java.io.File
 
 class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
     GoogleMap.OnMyLocationButtonClickListener, GoogleMap.OnMyLocationClickListener {
@@ -51,6 +54,12 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
     private lateinit var auth: FirebaseAuth
     private lateinit var database: DatabaseReference
 
+    private lateinit var bitmap: Bitmap // Declaración global del bitmap
+
+    private var urllist = arrayOfNulls<String>(7)
+
+    private var namelist = arrayOfNulls<String>(7)
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,6 +77,15 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
         database = FirebaseDatabase.getInstance().reference
 
         val switchConsult = findViewById<SwitchMaterial>(R.id.ConsultarUbicacion)
+        val photoPerfil1 = findViewById<ImageView>(R.id.photoPerfil1)
+        val photoPerfil2 = findViewById<ImageView>(R.id.photoPerfil2)
+        val photoPerfil3 = findViewById<ImageView>(R.id.photoPerfil3)
+        val photoPerfil4 = findViewById<ImageView>(R.id.photoPerfil4)
+        val photoPerfil5 = findViewById<ImageView>(R.id.photoPerfil5)
+        val photoPerfil6 = findViewById<ImageView>(R.id.photoPerfil6)
+        val photoPerfil7 = findViewById<ImageView>(R.id.photoPerfil7)
+
+        val Imageviewlist = arrayOf(photoPerfil1, photoPerfil2, photoPerfil3, photoPerfil4, photoPerfil5, photoPerfil6, photoPerfil7)
 
         val docGroupRef = db.collection("users").document(auth.currentUser?.uid!!)
 
@@ -77,6 +95,7 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
             Log.d(TAG, "GrupoID: $grupoID")
 
             val docRefGroup = db.collection("grupos").document(grupoID!!)
+
 
             switchConsult.setOnCheckedChangeListener { _, isChecked ->
                 if (isChecked) {
@@ -93,10 +112,19 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
 
                             // Verifica si el UID no es nulo ni vacío antes de agregar el listener
                             uidList[i]?.let { uid ->
-                                if (uid.isNotEmpty()) {
-                                    addLocationListener(i, uid)
-                                } else {
-                                    Log.w(TAG, "UID vacío en la posición $i")
+                                val docRefImage = db.collection("users").document(uid)
+                                docRefImage.get().addOnSuccessListener { document3 ->
+
+                                    if (uid.isNotEmpty()) {
+                                        addLocationListener(i, uid)
+
+                                        urllist[i] = document3.getString("photoUrl")
+                                        
+                                        cargarFoto(urllist[i]!!, Imageviewlist[i])
+
+                                    } else {
+                                        Log.w(TAG, "UID vacío en la posición $i")
+                                    }
                                 }
                             }
                         }
@@ -121,15 +149,13 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
                     val longitud = dataSnapshot.child("longitud")
                         .getValue(String::class.java)?.toDoubleOrNull()
 
-                    Log.d(TAG, "Latitud del miembro $index: $latitud")
-                    Log.d(TAG, "Longitud del miembro $index: $longitud")
+                    Log.d(TAG, "Latitud y longitud del miembro $index: $latitud $longitud")
 
                     // Asegúrate de inicializar currentMarkers con un tamaño fijo o dinámico dependiendo del número de miembros
                     if (currentMarkers.size < 7) {
                         currentMarkers =
                             MutableList(7) { null } // Inicializa la lista con 7 elementos nulos
                     }
-
 
                     if (latitud != null && longitud != null) {
                         val coordinates = LatLng(latitud, longitud)
@@ -141,6 +167,7 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
                             currentMarkers[index] =
                                 null // Asegúrate de limpiar el valor después de remover el marker
                         }
+
 
                         if (index < currentMarkers.size) {
                             Log.d(TAG, "Agregando marker para el miembro $index")
@@ -187,6 +214,19 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
             }
         }
     }
+
+    private fun cargarFoto(photoUrl: String, imageView: ImageView) {
+        val storageRef = FirebaseStorage.getInstance().getReferenceFromUrl(photoUrl)
+        val localFile = File.createTempFile("tempImage", "jpg")
+
+        storageRef.getFile(localFile).addOnSuccessListener {
+            val bitmap = BitmapFactory.decodeFile(localFile.absolutePath)
+            imageView.setImageBitmap(bitmap) // Actualiza el ImageView correspondiente
+        }.addOnFailureListener {
+            Log.e(TAG, "Error al cargar la imagen: ${it.message}")
+        }
+    }
+
 
     ////////////////////////////////// COSAS QUE HACEN QUE FUNCIONE EL MAPA ///////////////////////////////////////////////
     private fun createFragment() {

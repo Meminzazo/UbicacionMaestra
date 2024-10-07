@@ -1,4 +1,4 @@
-package com.esime.ubicacionmaestra.Firstapp.ui
+package com.esime.ubicacionmaestra.Firstapp.ui.utilities
 
 import android.annotation.SuppressLint
 import android.content.Context

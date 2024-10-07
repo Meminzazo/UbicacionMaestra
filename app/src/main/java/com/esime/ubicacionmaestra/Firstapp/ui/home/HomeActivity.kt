@@ -1,4 +1,4 @@
-package com.esime.ubicacionmaestra.Firstapp.ui
+package com.esime.ubicacionmaestra.Firstapp.ui.home
 
 import android.content.Intent
 import android.os.Bundle
@@ -7,10 +7,11 @@ import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.addCallback
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.esime.ubicacionmaestra.Firstapp.ui.profile.PerfilActivity
+import com.esime.ubicacionmaestra.Firstapp.ui.auth.AuthActivity
 import com.esime.ubicacionmaestra.R
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore

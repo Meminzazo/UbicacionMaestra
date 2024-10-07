@@ -1,6 +1,5 @@
-package com.esime.ubicacionmaestra.Firstapp.ui
+package com.esime.ubicacionmaestra.Firstapp.ui.utilities
 
-import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -11,14 +10,9 @@ import android.content.Intent
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
-import android.widget.Toast
 import androidx.core.app.NotificationCompat
+import com.esime.ubicacionmaestra.Firstapp.ui.saveLocation.SaveUbicacionReal
 import com.esime.ubicacionmaestra.R
-import com.google.android.gms.common.api.ApiException
-import com.google.android.gms.location.Geofence
-import com.google.android.gms.location.GeofenceStatusCodes
-import com.google.android.gms.location.GeofencingClient
-import com.google.android.gms.location.GeofencingRequest
 import com.google.firebase.Firebase
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.database
@@ -42,7 +36,7 @@ class UbicacionGuardarService : Service() {
     val TAG = "UbicacionGuardarService" // Definimos la variable TAG para el Logcat
 
     // Creamos una instancia de LocationService para la consulta de ubicación
-    private val locationService:LocationService = LocationService()
+    private val locationService: LocationService = LocationService()
 
     //Creamos una instancia de FirebaseFirestore para guardar los datos en la base de datos
     val db = FirebaseFirestore.getInstance()

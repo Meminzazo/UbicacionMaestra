@@ -1,4 +1,4 @@
-package com.esime.ubicacionmaestra.Firstapp.ui
+package com.esime.ubicacionmaestra.Firstapp.ui.home
 
 import android.annotation.SuppressLint
 import android.content.Intent
@@ -7,20 +7,17 @@ import android.util.Log
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.esime.ubicacionmaestra.Firstapp.ui.historicLocation.ViewLocationsActivity
+import com.esime.ubicacionmaestra.Firstapp.ui.consult1To1.ConsultAppR
+import com.esime.ubicacionmaestra.Firstapp.ui.consultGroup.ConsultGroupAcivity
+import com.esime.ubicacionmaestra.Firstapp.ui.saveLocation.SaveUbicacionReal
 import com.esime.ubicacionmaestra.R
-import com.google.android.gms.location.LocationServices
 import com.google.firebase.Firebase
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.database
-import com.google.firebase.firestore.FirebaseFirestore
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
