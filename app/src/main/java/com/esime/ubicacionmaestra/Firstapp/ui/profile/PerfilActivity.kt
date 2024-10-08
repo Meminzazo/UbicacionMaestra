@@ -6,6 +6,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -101,6 +102,8 @@ class PerfilActivity : AppCompatActivity() {
         val SalirGrupoButton = findViewById<Button>(R.id.SalirGrupoButton)
         val IDGrupo = findViewById<TextView>(R.id.IDGrupo)
         val PertenecerGrupo = findViewById<TextView>(R.id.textGrupo)
+        val botonHablarConBot: Button = findViewById(R.id.boton_iniciar_conversacion)
+
 
         // Aparecen muchas veces las declaraciones de los botones y asi pero es para que se muestren en los campos y puedas modificarlos directamente
 
@@ -263,6 +266,30 @@ class PerfilActivity : AppCompatActivity() {
                 }
             }
         }
+
+        // Boton para registrar el chat ID del bot
+
+        botonHablarConBot.setOnClickListener {
+            // Intent para abrir la conversación con el bot
+            val botname = "ubimaster_bot"
+            val intent = Intent(Intent.ACTION_VIEW)
+            intent.data = Uri.parse("tg://resolve?domain=$botname")
+            Log.d(TAG, "Intent creado a: $intent")
+
+            //verificar si telegram esta instalado
+            val pm = packageManager
+
+            // Verifica si esta la app de telegram instalada
+            try {
+                pm.getPackageInfo("org.telegram.messenger", PackageManager.GET_ACTIVITIES)
+                startActivity(intent) // Abre la app de Telegram si está instalada
+            } catch (e: PackageManager.NameNotFoundException) {
+                // Si Telegram no está instalado, abrir en el navegador
+                val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/$botname"))
+                startActivity(webIntent)
+            }
+        }
+
 
 
         // Obtener los datos del usuario de la base de datos y mostrarlos en los campos
@@ -451,11 +478,13 @@ class PerfilActivity : AppCompatActivity() {
             val nombres = nombresEditText.text.toString()
             val apellidos = apellidosEditText.text.toString()
             val telefono = telefonoEditText.text.toString()
+            val chat_id = "null"
 
             val userData = hashMapOf(   // Formato para la base de datos
                 "Nombres" to nombres,
                 "Apellidos" to apellidos,
-                "Telefono" to telefono
+                "Telefono" to telefono,
+                "chat_id" to chat_id
             )
 
             // Conexion con la base de datos para guardar los datos del usuario

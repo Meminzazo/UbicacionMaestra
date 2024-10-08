@@ -7,10 +7,10 @@ plugins {
 android {
     namespace = "com.esime.ubicacionmaestra"
     compileSdk = 34
-
     packagingOptions {
-        exclude ("androidsupportmultidexversion.txt")
-
+        resources {
+            excludes += setOf("androidsupportmultidexversion.txt")
+        }
     }
 
 
