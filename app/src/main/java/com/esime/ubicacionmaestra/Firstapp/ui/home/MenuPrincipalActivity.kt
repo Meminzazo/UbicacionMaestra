@@ -1,19 +1,28 @@
 package com.esime.ubicacionmaestra.Firstapp.ui.home
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.esime.ubicacionmaestra.Firstapp.ui.historicLocation.ViewLocationsActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.consult1To1.ConsultAppR
 import com.esime.ubicacionmaestra.Firstapp.ui.consultGroup.ConsultGroupAcivity
 import com.esime.ubicacionmaestra.Firstapp.ui.saveLocation.SaveUbicacionReal
+import com.esime.ubicacionmaestra.Firstapp.ui.saveLocation.SaveUbicacionReal.Companion.BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE
+import com.esime.ubicacionmaestra.Firstapp.ui.saveLocation.SaveUbicacionReal.Companion.NOTIFICATION_PERMISSION_REQUEST_CODE
 import com.esime.ubicacionmaestra.R
 import com.google.firebase.Firebase
 import com.google.firebase.database.DatabaseReference
@@ -37,11 +46,6 @@ interface WeatherService {
         @Query("units") units: String = "metric" // Usar unidades métricas
     ): Call<WeatherResponse>
 }
-data class User(val username: String? = null, val email: String? = null) {
-    // Null default values create a no-argument default constructor, which is needed
-    // for deserialization from a DataSnapshot.
-}
-
 data class WeatherResponse(
     @SerializedName("main") val main: Main,
     @SerializedName("weather") val weather: List<Weather>,
@@ -78,8 +82,8 @@ class MenuPrincipalActivity : AppCompatActivity() {
 
     companion object {
         const val REQUEST_CODE_LOCATION = 0
-        const val PREFS_NAME = "SwitchPrefs"
-        const val SWITCH_STATE = "switch_state"
+        const val BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE = 1002
+        const val ALL_PERMISSIONS_REQUEST_CODE = 1001
     }
 
     // Replace with your OpenWeather API key
@@ -91,6 +95,8 @@ class MenuPrincipalActivity : AppCompatActivity() {
 
         // Aquí se llama a la función para obtener el clima
         fetchWeather()
+
+        requestAllPermissions()
 
         supportActionBar?.hide()    // Oculta la barra de título
 
@@ -165,6 +171,7 @@ class MenuPrincipalActivity : AppCompatActivity() {
         val weatherService = RetrofitInstance.weatherService
 
         weatherService.getCurrentWeather(latitude, longitude, apiKey).enqueue(object : Callback<WeatherResponse> {
+            @SuppressLint("SetTextI18n")
             override fun onResponse(call: Call<WeatherResponse>, response: Response<WeatherResponse>) {
                 if (response.isSuccessful) {
                     val weatherResponse = response.body()
@@ -193,4 +200,109 @@ class MenuPrincipalActivity : AppCompatActivity() {
             }
         })
     }
+
+    private fun requestAllPermissions() {
+        val permissions = mutableListOf<String>()
+
+        // Verifica permisos de ubicación en primer plano
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED) {
+            permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+
+        // Verifica permisos de notificaciones (solo para Android Tiramisu y superior)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED) {
+                permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+
+        // Si hay permisos pendientes, solicitarlos
+        if (permissions.isNotEmpty()) {
+            ActivityCompat.requestPermissions(
+                this,
+                permissions.toTypedArray(),
+                ALL_PERMISSIONS_REQUEST_CODE
+            )
+        }
+    }
+
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun isBackgroundLocationPermissionGranted() = ContextCompat.checkSelfPermission(
+        this,
+        Manifest.permission.ACCESS_BACKGROUND_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
+
+    private fun requestBackgroundLocationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (!isBackgroundLocationPermissionGranted()) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
+                    BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE
+                )
+            }
+        }
+    }
+
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        when (requestCode) {
+            ALL_PERMISSIONS_REQUEST_CODE -> {
+                permissions.forEachIndexed { index, permission ->
+                    when (permission) {
+                        Manifest.permission.ACCESS_FINE_LOCATION -> {
+                            if (grantResults[index] == PackageManager.PERMISSION_GRANTED) {
+                                // Permiso de ubicación en primer plano concedido
+                                Toast.makeText(this, "Permiso de ubicación concedido", Toast.LENGTH_SHORT).show()
+                                // Ahora solicita la ubicación en segundo plano
+                                requestBackgroundLocationPermission()
+                            } else {
+                                // Permiso de ubicación en primer plano denegado
+                                Toast.makeText(this, "Permiso de ubicación denegado", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+
+                        Manifest.permission.POST_NOTIFICATIONS -> {
+                            if (grantResults[index] == PackageManager.PERMISSION_GRANTED) {
+                                // Permiso de notificaciones concedido
+                                Toast.makeText(this, "Permiso de notificaciones concedido", Toast.LENGTH_SHORT).show()
+                            } else {
+                                // Permiso de notificaciones denegado
+                                Toast.makeText(this, "Permiso de notificaciones denegado", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                }
+            }
+
+            BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE -> {
+                // Maneja la respuesta del permiso de ubicación en segundo plano
+                permissions.forEachIndexed { index, permission ->
+                    if (permission == Manifest.permission.ACCESS_BACKGROUND_LOCATION) {
+                        if (grantResults[index] == PackageManager.PERMISSION_GRANTED) {
+                            Toast.makeText(this, "Permiso de ubicación en segundo plano concedido", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(this, "Permiso de ubicación en segundo plano denegado", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+
 }
