@@ -19,6 +19,8 @@ import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.esime.ubicacionmaestra.Firstapp.ui.consult1To1.ConsultAppR
+import com.esime.ubicacionmaestra.Firstapp.ui.consult1To1.ConsultAppR.Companion
 import com.esime.ubicacionmaestra.R
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -73,6 +75,13 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
         var grupoID: String? = null
         val docRefHis = db.collection("users").document(uid!!)
         val emailsList = mutableListOf<String>()
+
+        val uidList = mutableListOf<String>()
+
+        val nameUidMap = mutableMapOf<String, String>()  // Para ligar nombres con UIDs
+        val nombresList =
+            mutableListOf<String>()  // Lista para nombres que se mostrará en el Spinner
+
         //Log.i(TAG, emailPropio!!)
 
         docRefHis.get().addOnSuccessListener { document ->
@@ -82,52 +91,66 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
                 grupoID = GrupoID!!
             }
 
-            Log.i(TAG,"GrupoID: $grupoID")
+            Log.i(TAG, "GrupoID: $grupoID")
 
             val docRef = db.collection("grupos").document(grupoID!!)
-            docRef.get().addOnSuccessListener { document1 ->
-                if (document1 != null && document1.exists()) {
-
-                    emailsList.clear()
-
-                    for (field in document1.data?.keys.orEmpty()) {
-                        // Aquí asumimos que los campos son email1, email2, etc.
-                        val email = document1.getString(field)
-                        if (!email.isNullOrEmpty()) {
-                            emailsList.add(email)
+            docRef.get().addOnSuccessListener { document ->
+                if (document != null) {
+                    for (field in document.data?.keys.orEmpty()) {
+                        val uid = document.getString(field)
+                        if (!uid.isNullOrEmpty()) {
+                            uidList.add(uid)
                         }
                     }
 
-                    Log.i(TAG, "Correos disponibles: $emailsList")
+                    // Iteramos por cada UID para obtener el nombre del usuario
+                    uidList.forEach { uid ->
+                        db.collection("users").document(uid).get()
+                            .addOnSuccessListener { userDocument ->
+                                val nombre =
+                                    userDocument.getString("Nombres")  // Asegúrate de que el campo sea correcto
+                                if (!nombre.isNullOrEmpty()) {
+                                    nombresList.add(nombre)  // Agrega el nombre a la lista
+                                    nameUidMap[nombre] =
+                                        uid  // Asocia el nombre con el UID en el map
 
-                    if (emailsList.isNotEmpty()) {
-                        // Configura el adaptador del Spinner
-                        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, emailsList)
-                        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                        spinnerHisUbi.adapter = adapter
-                    }else{
-                        Toast.makeText(this, "No hay correos disponibles", Toast.LENGTH_SHORT).show()
+                                    Log.i(ConsultAppR.TAG, "Nombre: $nombre, UID: $uid")
+                                }
+
+                                // Cuando hayamos terminado de obtener todos los nombres, configuramos el Spinner
+                                if (nombresList.size == uidList.size) {  // Asegúrate de que tenemos todos los nombres
+                                    val adapter = ArrayAdapter(
+                                        this, android.R.layout.simple_spinner_item, nombresList
+                                    )
+                                    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                                    spinnerHisUbi.adapter = adapter
+                                }
+                            }.addOnFailureListener { e ->
+                            Log.w(ConsultAppR.TAG, "Error al obtener el usuario con UID: $uid", e)
+                        }
                     }
+
                 } else {
                     Toast.makeText(this, "No se encontró el grupo", Toast.LENGTH_SHORT).show()
                 }
             }.addOnFailureListener { e ->
-                Log.w(TAG, "Error al obtener el documento", e)
+                Log.w(ConsultAppR.TAG, "Error al obtener el documento", e)
             }
-        }
 
 
             selectDateButton.setOnClickListener {   // Cuando se hace click en el boton de la seleccion de fecha
 
-                val emailUbiHist = spinnerHisUbi.selectedItem.toString() ?: ""
+                val selectedName = spinnerHisUbi.selectedItem.toString()
+                val emailUbiHist = nameUidMap[selectedName]  // Obtenemos el UID asociado al nombre
+
                 Log.i(TAG, "Email a consultar: $emailUbiHist")
 
 
-                if(emailUbiHist.isEmpty()){ // Si el EditText no esta vacio
+                if (emailUbiHist!!.isEmpty()) { // Si el EditText no esta vacio
                     Toast.makeText(this, "Seleccione un email valido!", Toast.LENGTH_LONG).show()
 
-                }else{
-                    val docRef = db.collection("users").document(emailUbiHist)
+                } else {
+                    val docRef = db.collection("users").document(emailUbiHist!!)
                     docRef.get().addOnSuccessListener { document1 ->
                         val nuevaPhoto = document1.getString("photoUrl")
                         if (nuevaPhoto != null) {
@@ -138,8 +161,9 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
                     showDatePickerDialog(emailUbiHist)   // Muestra el Selector del dia
                 }
             }
-        // Llamamos a la funcion para crear el mapa
-        createMapFragment()
+            // Llamamos a la funcion para crear el mapa
+            createMapFragment()
+        }
     }
 
     private fun cargarFotoEnMarker(photoUrl: String) {

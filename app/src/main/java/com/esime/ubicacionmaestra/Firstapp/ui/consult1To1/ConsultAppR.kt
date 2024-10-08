@@ -120,6 +120,8 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
         createFragment()
 
         var grupoID: String? = null
+        val nameUidMap = mutableMapOf<String, String>()  // Para ligar nombres con UIDs
+        val nombresList = mutableListOf<String>()  // Lista para nombres que se mostrará en el Spinner
 
         geofencingClient = LocationServices.getGeofencingClient(this)
         database = FirebaseDatabase.getInstance().reference
@@ -141,19 +143,35 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
             docRef.get().addOnSuccessListener { document ->
                 if (document != null) {
                     for (field in document.data?.keys.orEmpty()) {
-                        // Aquí asumimos que los campos son email1, email2, etc.
                         val uid = document.getString(field)
                         if (!uid.isNullOrEmpty()) {
                             uidList.add(uid)
                         }
                     }
 
-                    // Configura el adaptador del Spinner
-                    val adapter =
-                        ArrayAdapter(this, android.R.layout.simple_spinner_item, uidList)
-                    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                    spinnerUbi.adapter = adapter
+                    // Iteramos por cada UID para obtener el nombre del usuario
+                    uidList.forEach { uid ->
+                        db.collection("users").document(uid).get().addOnSuccessListener { userDocument ->
+                            val nombre = userDocument.getString("Nombres")  // Asegúrate de que el campo sea correcto
+                            if (!nombre.isNullOrEmpty()) {
+                                nombresList.add(nombre)  // Agrega el nombre a la lista
+                                nameUidMap[nombre] = uid  // Asocia el nombre con el UID en el map
 
+                                Log.i(TAG, "Nombre: $nombre, UID: $uid")
+                            }
+
+                            // Cuando hayamos terminado de obtener todos los nombres, configuramos el Spinner
+                            if (nombresList.size == uidList.size) {  // Asegúrate de que tenemos todos los nombres
+                                val adapter = ArrayAdapter(
+                                    this, android.R.layout.simple_spinner_item, nombresList
+                                )
+                                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                                spinnerUbi.adapter = adapter
+                            }
+                        }.addOnFailureListener { e ->
+                            Log.w(TAG, "Error al obtener el usuario con UID: $uid", e)
+                        }
+                    }
 
                 } else {
                     Toast.makeText(this, "No se encontró el grupo", Toast.LENGTH_SHORT).show()
@@ -162,25 +180,27 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                 Log.w(TAG, "Error al obtener el documento", e)
             }
 
+
             // Cambio de estado del switch
             switchConsultar.setOnCheckedChangeListener { _, isChecked ->
 
-                uidToConsult = spinnerUbi.selectedItem.toString()
-                Log.i(TAG, "UID a consultar: $uidToConsult")
+                val selectedName = spinnerUbi.selectedItem.toString()
+                uidToConsult = nameUidMap[selectedName]  // Obtenemos el UID asociado al nombre
+
+                Log.i(TAG, "Nombre seleccionado: $selectedName con UID: $uidToConsult")
 
                 val docRef4 = db.collection("users").document(uidToConsult!!)
 
                 docRef4.get().addOnSuccessListener { document4 ->
                     val PhotoUrl = document4.getString("photoUrl")
-                    val nombre1 = document4.getString("Nombres")
-                    Log.i(TAG, "Nombre: $nombre1")
+
                     Log.i(TAG, "PhotoUrl: $PhotoUrl")
                     if (PhotoUrl != null) {
                         cargarFoto(PhotoUrl)
                     }
-                    if (nombre1 != null) {
-                        nombresubi.text = nombre1
-                        nombre = nombre1
+                    if (selectedName != null) {
+                        nombresubi.text = selectedName
+                        //nombre = selectedName
                     }
                 }
                 if (uidToConsult!!.isEmpty()) {
@@ -255,13 +275,11 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                                         if (latitud != null && longitud != null) {
                                             Log.i(TAG, "Latitud: $latitud, Longitud: $longitud")
                                             val coordinates = LatLng(latitud, longitud)
-                                            if (nombre == null) {
-                                                nombre = "Sin Nombre"
-                                            }
+
                                             currentMarker?.remove()
 
                                             currentMarker = map.addMarker(
-                                                MarkerOptions().position(coordinates).title(nombre)
+                                                MarkerOptions().position(coordinates).title(selectedName)
                                                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)).flat(true)
                                                     )
                                             map.animateCamera(
