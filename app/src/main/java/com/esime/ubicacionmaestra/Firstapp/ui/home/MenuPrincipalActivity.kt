@@ -20,10 +20,11 @@ import androidx.core.view.WindowInsetsCompat
 import com.esime.ubicacionmaestra.Firstapp.ui.historicLocation.ViewLocationsActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.consult1To1.ConsultAppR
 import com.esime.ubicacionmaestra.Firstapp.ui.consultGroup.ConsultGroupAcivity
+import com.esime.ubicacionmaestra.Firstapp.ui.panic.panicBttonActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.saveLocation.SaveUbicacionReal
-import com.esime.ubicacionmaestra.Firstapp.ui.saveLocation.SaveUbicacionReal.Companion.BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE
-import com.esime.ubicacionmaestra.Firstapp.ui.saveLocation.SaveUbicacionReal.Companion.NOTIFICATION_PERMISSION_REQUEST_CODE
+import com.esime.ubicacionmaestra.Firstapp.ui.utilities.services.EarthquakeMonitoringService
 import com.esime.ubicacionmaestra.R
+import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.firebase.Firebase
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.database
@@ -117,9 +118,19 @@ class MenuPrincipalActivity : AppCompatActivity() {
         val saveUbi = findViewById<Button>(R.id.saveUbi)
         val viewLocationsButton = findViewById<Button>(R.id.viewsLocationsButton)
         val consultGruopButton = findViewById<Button>(R.id.consultUbiGroup)
+        val sismosSwitch = findViewById<SwitchMaterial>(R.id.sismosSwitch)
+        val panicButton = findViewById<Button>(R.id.panicButton)
 
         database = Firebase.database.reference
 
+        sismosSwitch.setOnCheckedChangeListener { _, isChecked ->
+            val intent = Intent(this, EarthquakeMonitoringService::class.java)
+            if (sismosSwitch.isChecked) {
+                startService(intent)
+            } else {
+                stopService(intent)
+            }
+        }
 
         consultButton.setOnClickListener {
             Log.d("MenuPrincipalActivity", "to ConsultAppR Email: $email")
@@ -154,7 +165,11 @@ class MenuPrincipalActivity : AppCompatActivity() {
             }
             startActivity(intent)   // Lanzamos la activity
         }
-
+        panicButton.setOnClickListener {
+            val intent = Intent(this, panicBttonActivity::class.java).apply {
+            }
+            startActivity(intent)   // Lanzamos la activity
+        }
     }
 
     // Función para obtener la ubicación actual (dummy para ejemplificar)

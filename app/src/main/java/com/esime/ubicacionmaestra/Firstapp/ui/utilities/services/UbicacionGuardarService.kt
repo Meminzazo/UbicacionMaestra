@@ -1,4 +1,4 @@
-package com.esime.ubicacionmaestra.Firstapp.ui.utilities
+package com.esime.ubicacionmaestra.Firstapp.ui.utilities.services
 
 import android.app.Notification
 import android.app.NotificationChannel
