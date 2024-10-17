@@ -2,6 +2,7 @@ package com.esime.ubicacionmaestra.Firstapp.ui.consult1To1
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -332,6 +333,20 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
         }
     }
 
+    @SuppressLint("MissingSuperCall")
+    override fun onBackPressed() {
+        finish() // Cierra la Activity
+    }
+
+    private fun setupMap() {
+        val sharedPreferences = getSharedPreferences("MapSettings", Context.MODE_PRIVATE)
+        val mapType = sharedPreferences.getInt("map_type", GoogleMap.MAP_TYPE_NORMAL)
+        val trafficEnabled = sharedPreferences.getBoolean("traffic_enabled", false)
+
+        map.mapType = mapType
+        map.isTrafficEnabled = trafficEnabled
+    }
+
     private fun cargarFoto(photoUrl: String) {
         val storageRef = FirebaseStorage.getInstance().getReferenceFromUrl(photoUrl)
         val localFile = File.createTempFile("tempImage", "jpg")
@@ -385,10 +400,11 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
         enableLocation()
-        map.mapType = GoogleMap.MAP_TYPE_NORMAL
-        map.isTrafficEnabled = true
-        map.setOnMyLocationButtonClickListener(this)
-        map.setOnMyLocationClickListener(this)
+        //map.setOnMyLocationButtonClickListener(this)
+        //map.setOnMyLocationClickListener(this)
+        setupMap()
+        val mexicoCity = LatLng(19.432608, -99.133209)
+        map.moveCamera(com.google.android.gms.maps.CameraUpdateFactory.newLatLngZoom(mexicoCity, 5f))
         consultaGeofence()
     }
 

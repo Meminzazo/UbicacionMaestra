@@ -111,6 +111,7 @@ class HomeActivity : AppCompatActivity() {
                 putExtra("UID", uid)
             }
             startActivity(intent)
+            finish()
         }
 
         // lanza la aplicacion
@@ -129,6 +130,7 @@ class HomeActivity : AppCompatActivity() {
                     putExtra("UID", uid)
                 }
                 startActivity(intent)
+                finish()
             }
         }
     }

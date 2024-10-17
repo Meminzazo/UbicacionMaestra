@@ -20,6 +20,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import com.esime.ubicacionmaestra.Firstapp.ui.home.HomeActivity
 import com.esime.ubicacionmaestra.R
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -332,6 +333,13 @@ class PerfilActivity : AppCompatActivity() {
         }
 
 
+    }
+
+    @SuppressLint("MissingSuperCall")
+    override fun onBackPressed() {
+        val intent = Intent(this, HomeActivity::class.java)
+        startActivity(intent)
+        finish() // Cierra la `PerfilActivity`
     }
 
     private fun cargarFoto(photoUrl: String) {

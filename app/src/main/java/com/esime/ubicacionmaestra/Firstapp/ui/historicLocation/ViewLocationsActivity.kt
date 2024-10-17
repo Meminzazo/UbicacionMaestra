@@ -2,6 +2,8 @@ package com.esime.ubicacionmaestra.Firstapp.ui.historicLocation
 
 import android.annotation.SuppressLint
 import android.app.DatePickerDialog
+import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -21,6 +23,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.consult1To1.ConsultAppR
 import com.esime.ubicacionmaestra.Firstapp.ui.consult1To1.ConsultAppR.Companion
+import com.esime.ubicacionmaestra.Firstapp.ui.home.HomeActivity
 import com.esime.ubicacionmaestra.R
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -166,6 +169,11 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
+    @SuppressLint("MissingSuperCall")
+    override fun onBackPressed() {
+        finish() // Cierra la Activity
+    }
+
     private fun cargarFotoEnMarker(photoUrl: String) {
         val storageRef = FirebaseStorage.getInstance().getReferenceFromUrl(photoUrl)
         val localFile = File.createTempFile("tempImage", "jpg")
@@ -184,8 +192,20 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
+        val mexicoCity = LatLng(19.432608, -99.133209)
+        map.moveCamera(CameraUpdateFactory.newLatLngZoom(mexicoCity, 5f))
+        setupMap()
     }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    private fun setupMap() {
+        val sharedPreferences = getSharedPreferences("MapSettings", Context.MODE_PRIVATE)
+        val mapType = sharedPreferences.getInt("map_type", GoogleMap.MAP_TYPE_NORMAL)
+        val trafficEnabled = sharedPreferences.getBoolean("traffic_enabled", false)
+
+        map.mapType = mapType
+        map.isTrafficEnabled = trafficEnabled
+    }
 
     // Funcion para mostrar el Selector del Mapa
     private fun showDatePickerDialog(emailhis: String?) {

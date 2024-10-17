@@ -22,6 +22,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.esime.ubicacionmaestra.Firstapp.ui.config.preferenceUserActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.home.MenuPrincipalActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.consult1To1.ConsultAppR
 import com.esime.ubicacionmaestra.Firstapp.ui.utilities.GeofenceBroadcastReceiver
@@ -33,6 +34,7 @@ import com.google.android.gms.location.GeofenceStatusCodes
 import com.google.android.gms.location.GeofencingClient
 import com.google.android.gms.location.GeofencingRequest
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
@@ -99,16 +101,22 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         uid = bundle?.getString("UID")
 
         Log.d(TAG, "UID: $uid")
-
         createFragment()
 
         val ConfiButton = findViewById<Button>(R.id.AjustesButton)
         val switchUbicacionReal = findViewById<SwitchMaterial>(R.id.UbicacionReal) as SwitchMaterial
         val sharedPrefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val btnAjustes = findViewById<Button>(R.id.btnAjustes)
         switchUbicacionReal.isChecked = sharedPrefs.getBoolean(SWITCH_STATE, false)
 
         ConfiButton.setOnClickListener {view ->
             showGeofenceDialog()
+            Log.d(TAG, "Boton Ajustes pulsado")
+        }
+        btnAjustes.setOnClickListener {view ->
+            val intent = Intent(this, preferenceUserActivity::class.java)
+            startActivity(intent)
+            finish()
             Log.d(TAG, "Boton Ajustes pulsado")
         }
 
@@ -138,6 +146,16 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
             }
         }
     }
+
+    private fun setupMap() {
+        val sharedPreferences = getSharedPreferences("MapSettings", Context.MODE_PRIVATE)
+        val mapType = sharedPreferences.getInt("map_type", GoogleMap.MAP_TYPE_NORMAL)
+        val trafficEnabled = sharedPreferences.getBoolean("traffic_enabled", false)
+
+        map.mapType = mapType
+        map.isTrafficEnabled = trafficEnabled
+    }
+
 
     @SuppressLint("MissingPermission")
     private fun addGeofence(nombre: String?, latitud: Double?, longitud: Double?, radio: Float?) {
@@ -333,7 +351,7 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
 
         val user = User(name, latitud, longitud, radius)
 
-        database.child("users").child("hmaury10").child("Geovallas").child(name).setValue(user)
+        database.child("users").child(uid!!).child("Geovallas").child(name).setValue(user)
     }
 
     private fun createFragment(){
@@ -344,7 +362,9 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
         enableLocation()
-        map.mapType = GoogleMap.MAP_TYPE_NORMAL
+        setupMap()
+        val mexicoCity = LatLng(19.432608, -99.133209)
+        map.moveCamera(CameraUpdateFactory.newLatLngZoom(mexicoCity, 5f))
         map.setOnMyLocationButtonClickListener(this)
         map.setOnMyLocationClickListener(this)
         consultaGeofence()

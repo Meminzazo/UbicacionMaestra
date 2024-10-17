@@ -2,6 +2,7 @@ package com.esime.ubicacionmaestra.Firstapp.ui.consultGroup
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -215,6 +216,15 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
         }
     }
 
+    private fun setupMap() {
+        val sharedPreferences = getSharedPreferences("MapSettings", Context.MODE_PRIVATE)
+        val mapType = sharedPreferences.getInt("map_type", GoogleMap.MAP_TYPE_NORMAL)
+        val trafficEnabled = sharedPreferences.getBoolean("traffic_enabled", false)
+
+        map.mapType = mapType
+        map.isTrafficEnabled = trafficEnabled
+    }
+
     private fun cargarFoto(photoUrl: String, imageView: ImageView) {
         val storageRef = FirebaseStorage.getInstance().getReferenceFromUrl(photoUrl)
         val localFile = File.createTempFile("tempImage", "jpg")
@@ -236,10 +246,11 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
         enableLocation()
-        map.mapType = GoogleMap.MAP_TYPE_NORMAL
-        map.isTrafficEnabled = true
         //map.setOnMyLocationButtonClickListener(this)
         //map.setOnMyLocationClickListener(this)
+        setupMap()
+        val mexicoCity = LatLng(19.432608, -99.133209)
+        map.moveCamera(com.google.android.gms.maps.CameraUpdateFactory.newLatLngZoom(mexicoCity, 5f))
     }
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

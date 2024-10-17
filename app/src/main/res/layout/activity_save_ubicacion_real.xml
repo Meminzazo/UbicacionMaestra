@@ -50,9 +50,17 @@
         android:id="@+id/AjustesButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Ajustes"
+        android:text="Añadir geovalla"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
+
+    <Button
+        android:id="@+id/btnAjustes"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Ajustes de mapa"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

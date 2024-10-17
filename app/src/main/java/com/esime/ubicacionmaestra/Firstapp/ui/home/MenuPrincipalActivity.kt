@@ -17,6 +17,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.esime.ubicacionmaestra.Firstapp.ui.config.preferenceUserActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.historicLocation.ViewLocationsActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.consult1To1.ConsultAppR
 import com.esime.ubicacionmaestra.Firstapp.ui.consultGroup.ConsultGroupAcivity
@@ -166,7 +167,7 @@ class MenuPrincipalActivity : AppCompatActivity() {
             startActivity(intent)   // Lanzamos la activity
         }
         panicButton.setOnClickListener {
-            val intent = Intent(this, panicBttonActivity::class.java).apply {
+            val intent = Intent(this, preferenceUserActivity::class.java).apply {
             }
             startActivity(intent)   // Lanzamos la activity
         }

@@ -48,11 +48,14 @@ class panicBttonActivity : AppCompatActivity() {
 
     }
 
-    // Función para actualizar la hora y fecha en tiempo real
     private fun updateTimeAndDate() {
-        val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-        val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+        // Formato para la hora en formato de 12 horas con AM/PM
+        val timeFormat = SimpleDateFormat("hh:mm:ss a", Locale.getDefault())
 
+        // Formato para la fecha con día de la semana, mes en texto y año
+        val dateFormat = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.getDefault())
+
+        // Handler para actualizar la fecha y hora en tiempo real
         val handler = Handler(Looper.getMainLooper())
 
         handler.post(object : Runnable {
@@ -71,5 +74,6 @@ class panicBttonActivity : AppCompatActivity() {
             }
         })
     }
+
 
 }
