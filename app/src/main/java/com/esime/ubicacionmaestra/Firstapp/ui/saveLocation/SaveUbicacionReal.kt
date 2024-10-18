@@ -7,6 +7,7 @@ import android.app.AlertDialog
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.location.Location
@@ -21,13 +22,15 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.esime.ubicacionmaestra.Firstapp.ui.config.preferenceUserActivity
+import com.esime.ubicacionmaestra.Firstapp.ui.preferences.preferenceUserActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.home.MenuPrincipalActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.consult1To1.ConsultAppR
-import com.esime.ubicacionmaestra.Firstapp.ui.utilities.GeofenceBroadcastReceiver
-import com.esime.ubicacionmaestra.Firstapp.ui.utilities.MapActivity
+import com.esime.ubicacionmaestra.Firstapp.ui.utilities.broadcasts.GeofenceBroadcastReceiver
+import com.esime.ubicacionmaestra.Firstapp.ui.utilities.activitiesUseful.MapActivity
+import com.esime.ubicacionmaestra.Firstapp.ui.utilities.broadcasts.BatteryMapReceiver
 import com.esime.ubicacionmaestra.Firstapp.ui.utilities.services.UbicacionGuardarService
 import com.esime.ubicacionmaestra.R
 import com.google.android.gms.common.api.ApiException
@@ -84,7 +87,7 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
     }
 
     private lateinit var database: DatabaseReference
-
+    private lateinit var batteryMapReceiver: BatteryMapReceiver
     private lateinit var geofencingClient: GeofencingClient
 
 
@@ -97,6 +100,12 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         requestLocationPermission()
 
         geofencingClient = LocationServices.getGeofencingClient(this)
+
+        // Registrar el BroadcastReceiver para el nivel de batería (cambiar tipo de mapa)
+        batteryMapReceiver = BatteryMapReceiver()
+        val batteryStatusIntentFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        registerReceiver(batteryMapReceiver, batteryStatusIntentFilter)
+
 
         supportActionBar?.hide()
         val bundle = intent.extras
@@ -149,6 +158,10 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
             }
         }
     }
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterReceiver(batteryMapReceiver) // Importante: liberar el receptor para evitar pérdidas de memoria
+    }
 
     private fun setupMap() {
         val sharedPreferences = getSharedPreferences("MapSettings", Context.MODE_PRIVATE)
@@ -158,7 +171,6 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         map.mapType = mapType
         map.isTrafficEnabled = trafficEnabled
     }
-
 
     @SuppressLint("MissingPermission")
     private fun addGeofence(nombre: String?, latitud: Double?, longitud: Double?, radio: Float?) {
@@ -527,4 +539,12 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
             }
         }
     }
+    // Función para cambiar el tipo de mapa a NONE
+    fun changeMapToNone() {
+        val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
+        mapFragment.getMapAsync { googleMap ->
+            googleMap.mapType = GoogleMap.MAP_TYPE_NONE
+        }
+    }
+
 }

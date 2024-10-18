@@ -1,29 +1,29 @@
-package com.esime.ubicacionmaestra.Firstapp.ui.auth
+package com.esime.ubicacionmaestra.Firstapp.ui.auth.register
 
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
+import android.text.method.HideReturnsTransformationMethod
+import android.text.method.PasswordTransformationMethod
 import android.util.Log
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.Toast
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.esime.ubicacionmaestra.Firstapp.ui.home.HomeActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.home.ProviderType
+import com.esime.ubicacionmaestra.Firstapp.ui.welcome.welcomeActivity
 import com.esime.ubicacionmaestra.R
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.firestore.FirebaseFirestore
 
-
-
-
-class AuthActivity : AppCompatActivity() {
+class registerActivity : AppCompatActivity() {
     private lateinit var auth: FirebaseAuth   //variable de autenticacion
 
     // Declaracion de la base de datos
@@ -31,7 +31,7 @@ class AuthActivity : AppCompatActivity() {
     private lateinit var database: DatabaseReference
 
     companion object {
-        const val TAG = "AuthActivity" // Definimos la variable TAG aqui
+        const val TAG = "registerActivity" // Definimos la variable TAG aqui
     }
     // Datos de la base de datos (Formato)
     val user = hashMapOf(
@@ -57,52 +57,75 @@ class AuthActivity : AppCompatActivity() {
         val transitionTypes: String = "false"
     )
 
-    // Funcion que se inicia al entrar a la activity
-    @SuppressLint("WrongViewCast")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_auth)
+        setContentView(R.layout.activity_register)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
-
         supportActionBar?.hide()    // oculta la barra de titulo
-
         setup() // llama a la funcion setup que inicia la magia
     }
-
-    // Funcion que hace la magia
-    private fun setup(){
-
+    @SuppressLint("MissingSuperCall")
+    override fun onBackPressed() {
+        val intent = Intent(this, welcomeActivity::class.java)
+        startActivity(intent)
+        finish()
+    }
+    private fun setup() {
         // Declaracion de lo botones de la interfaz
-        val registrarButtom = findViewById<Button>(R.id.registrarButton)
-        val emailEditText = findViewById<EditText>(R.id.emailEditText)
-        val passEditText = findViewById<EditText>(R.id.passEditText)
-        val loginButton = findViewById<Button>(R.id.loginButton)
+        val registrarButton = findViewById<Button>(R.id.registrarButton)
+        val emailEditText = findViewById<androidx.appcompat.widget.AppCompatEditText>(R.id.emailEditText)
+        val passEditText = findViewById<androidx.appcompat.widget.AppCompatEditText>(R.id.passEditText)
+        val passEditText2 = findViewById<androidx.appcompat.widget.AppCompatEditText>(R.id.passEditText2)
+        val showHidePassButton = findViewById<ImageButton>(R.id.showHidePassButton)
+        val showHidePassConfirmButton = findViewById<ImageButton>(R.id.showHidePassConfirmButton)
 
+        var isPasswordVisible = false
+        var isPasswordVisible2 = false
         auth = FirebaseAuth.getInstance()
+        passEditText.transformationMethod = PasswordTransformationMethod.getInstance()
+        passEditText2.transformationMethod = PasswordTransformationMethod.getInstance()
+        // Configurar la acción para mostrar/ocultar la contraseña
+        showHidePassButton.setOnClickListener {
+            if (isPasswordVisible) {
+                // Si la contraseña está visible, la ocultamos
+                passEditText.transformationMethod = PasswordTransformationMethod.getInstance()
+                showHidePassButton.setImageResource(R.drawable.ic_visibility_off)
+            } else {
+                // Si la contraseña está oculta, la mostramos
+                passEditText.transformationMethod = HideReturnsTransformationMethod.getInstance()
+                showHidePassButton.setImageResource(R.drawable.ic_visibility)
+            }
+            // Mover el cursor al final del texto
+            passEditText.setSelection(passEditText.text?.length ?: 0)
+            isPasswordVisible = !isPasswordVisible
+        }
+        showHidePassConfirmButton.setOnClickListener {
+            if (isPasswordVisible2) {
+                // Si la contraseña está visible, la ocultamos
+                passEditText2.transformationMethod = PasswordTransformationMethod.getInstance()
+                showHidePassButton.setImageResource(R.drawable.ic_visibility_off)
+            } else {
+                // Si la contraseña está oculta, la mostramos
+                passEditText2.transformationMethod = HideReturnsTransformationMethod.getInstance()
+                showHidePassButton.setImageResource(R.drawable.ic_visibility)
+            }
+            // Mover el cursor al final del texto
+            passEditText2.setSelection(passEditText2.text?.length ?: 0)
+            isPasswordVisible2 = !isPasswordVisible2
+        }
 
         ///////// implementacion de la autenticacion
         auth = FirebaseAuth.getInstance()   //creamos una autenticacion
-        val currentUser = auth.currentUser
-        if (currentUser != null) {
-            //si el usuario esta autenticasdo, redirige a home
-            val intent = Intent(this, HomeActivity::class.java)
-            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK) //flag para definir la actividad actual y limpiar la anterior
-            startActivity(intent)   // inicia la activity
-            finish()  //finaliza la pila de actividad anterior
-        }
-        else{
-            //no hace nada y pasa a las demas actividades
-        }
-
 
         // ACCIONES AL PULSAR LE BOTON DE REGISTRARSE
-        registrarButtom.setOnClickListener() {  // al hacer click en el boton de registrar hace lo que esta dentro
+        registrarButton.setOnClickListener(){  // al hacer click en el boton de registrar hace lo que esta dentro
             val email = emailEditText.text.toString()
-                if (emailEditText.text.isNotEmpty() && passEditText.text.isNotEmpty()){           //comprueba si los campos son vacios
+            if (emailEditText.text!!.isNotEmpty() && passEditText.text!!.isNotEmpty() && passEditText2.text!!.isNotEmpty()){
+                if (passEditText.text.toString() == passEditText2.text.toString()){
                     FirebaseAuth.getInstance().createUserWithEmailAndPassword(
                         emailEditText.text.toString(),        //servicio de firebase autentication
                         passEditText.text.toString()
@@ -114,7 +137,7 @@ class AuthActivity : AppCompatActivity() {
 
                             Log.d(TAG, "UID: $UID")
 
-                            database.child("users").child(UID!!).setValue(UserUbi())
+                            database.child("users").child(UID!!).setValue(com.esime.ubicacionmaestra.Firstapp.ui.auth.AuthActivity.UserUbi())
 
                             crearcolletion(email, UID)  // solo crea a base de datos si los edit text no estan vacios
 
@@ -122,46 +145,40 @@ class AuthActivity : AppCompatActivity() {
                                 it.result?.user?.email ?: "",
                                 ProviderType.CORREO_ELECTRONICO
                             )   //en caso de no existir email manda un vacio, si no da error
-                        } else  //alerta de que ha pasado algo si no ...
-                        {
+                        }
+                        else{
                             showAlert()
                         }
                     }
+                }else{
+                    showAlertPass()
                 }
+
+            }
             // en caso de que los edit text esten vacios agrega esta alerta
 
             else {
-                    Toast.makeText(this, "Porfavor Ingrese Datos", Toast.LENGTH_SHORT)
-                        .show()    // mensaje en caso de estar vacio
-                }
-        }
-
-
-        // ACCIONES AL PULSAR LE BOTON DE INGRESAR
-       loginButton.setOnClickListener(){
-            if(emailEditText.text.isNotEmpty() && passEditText.text.isNotEmpty())           //comprueba si los campos son vacios
-            {
-                FirebaseAuth.getInstance().signInWithEmailAndPassword(emailEditText.text.toString(),        //ahora ingresa
-                    passEditText.text.toString()).addOnCompleteListener()    //notifica si el registro a sido satisfactorio
-                {
-                    if (it.isSuccessful) //si la operacion se completa correctamente ...
-                    {
-                        showHome(it.result?.user?.email?:"", ProviderType.CORREO_ELECTRONICO)   //en caso de no existir email manda un vacio, si no da error
-                    }
-                    else  //alerta de que ha pasado algo si no ...
-                    {
-                        showAlert()
-                    }
-                }
+                Toast.makeText(this, "Porfavor Ingrese Datos", Toast.LENGTH_SHORT)
+                    .show()    // mensaje en caso de estar vacio
             }
         }
     }
+
+    private fun showAlertPass() {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("¡Error O_O!")
+        builder.setMessage("Las contraseñas no coiciden")
+        builder.setPositiveButton("aceptar",null)
+        val dialog: AlertDialog = builder.create()
+        dialog.show()
+    }
+
     // FUNCIONES AUXIALIARES EN CASO DE CUALQUIER ACCION ANTERIOR
     private fun showAlert(){
         val builder = AlertDialog.Builder(this)
         builder.setTitle("¡Error O_O!")
-        builder.setMessage("Se ha producido un erro de autenticacion al usuario X_X")
-        builder.setPositiveButton("aceptar",null)
+        builder.setMessage("Se ha producido un error de autenticacion al usuario. Comprueba tu conexión a internet.")
+        builder.setPositiveButton("Entendido",null)
         val dialog: AlertDialog = builder.create()
         dialog.show()
     }
@@ -172,6 +189,7 @@ class AuthActivity : AppCompatActivity() {
             putExtra("provider", provider.name)
         }
         startActivity(homeIntent)
+        finish()
     }
 
     fun crearcolletion(email: String, UID: String){
@@ -184,10 +202,8 @@ class AuthActivity : AppCompatActivity() {
         database.child("users").child(UID).setValue(UserUbi())
         database.child("users").child(UID).child("Geovallas").child("ESIME").setValue(GeofenceD())
     }
-
     fun getUserId(): String? {
         val currentUser = FirebaseAuth.getInstance().currentUser
         return currentUser?.uid // El UID generado es único para cada usuario
     }
-
 }

@@ -1,13 +1,13 @@
-package com.esime.ubicacionmaestra.Firstapp.ui.utilities
+package com.esime.ubicacionmaestra.Firstapp.ui.utilities.services
 
-import retrofit2.Call
+import retrofit2.Response
 import retrofit2.http.GET
 
 interface EarthquakeApiService {
 
     // Método para obtener los terremotos recientes
     @GET("summary/all_day.geojson")  // Endpoint de la API de USGS para obtener terremotos de las últimas 24 horas
-    fun getRecentEarthquakes(): Call<EarthquakeResponse>
+    suspend fun getRecentEarthquakes(): Response<EarthquakeResponse>
 
     // Clase que representa la respuesta de la API
     data class EarthquakeResponse(

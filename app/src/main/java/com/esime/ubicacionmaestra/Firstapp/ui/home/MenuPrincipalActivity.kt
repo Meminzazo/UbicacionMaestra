@@ -2,6 +2,7 @@ package com.esime.ubicacionmaestra.Firstapp.ui.home
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -17,11 +18,10 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import com.esime.ubicacionmaestra.Firstapp.ui.config.preferenceUserActivity
+import com.esime.ubicacionmaestra.Firstapp.ui.preferences.preferenceUserActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.historicLocation.ViewLocationsActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.consult1To1.ConsultAppR
 import com.esime.ubicacionmaestra.Firstapp.ui.consultGroup.ConsultGroupAcivity
-import com.esime.ubicacionmaestra.Firstapp.ui.panic.panicBttonActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.saveLocation.SaveUbicacionReal
 import com.esime.ubicacionmaestra.Firstapp.ui.utilities.services.EarthquakeMonitoringService
 import com.esime.ubicacionmaestra.R
@@ -89,20 +89,23 @@ class MenuPrincipalActivity : AppCompatActivity() {
     }
 
     // Replace with your OpenWeather API key
-    private val apiKey = "e7fddd98d3cd75d27b33a6ba774fe5ed"
+    private var apiKey: String? = null
 
     @SuppressLint("MissingInflatedId", "LongLogTag")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_menu_principal)
+
+        apiKey = getString(R.string.api_key)
 
         // Aquí se llama a la función para obtener el clima
         fetchWeather()
 
         requestAllPermissions()
 
+
         supportActionBar?.hide()    // Oculta la barra de título
 
-        setContentView(R.layout.activity_menu_principal)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
@@ -119,22 +122,12 @@ class MenuPrincipalActivity : AppCompatActivity() {
         val saveUbi = findViewById<Button>(R.id.saveUbi)
         val viewLocationsButton = findViewById<Button>(R.id.viewsLocationsButton)
         val consultGruopButton = findViewById<Button>(R.id.consultUbiGroup)
-        val sismosSwitch = findViewById<SwitchMaterial>(R.id.sismosSwitch)
         val panicButton = findViewById<Button>(R.id.panicButton)
 
         database = Firebase.database.reference
 
-        sismosSwitch.setOnCheckedChangeListener { _, isChecked ->
-            val intent = Intent(this, EarthquakeMonitoringService::class.java)
-            if (sismosSwitch.isChecked) {
-                startService(intent)
-            } else {
-                stopService(intent)
-            }
-        }
-
         consultButton.setOnClickListener {
-            Log.d("MenuPrincipalActivity", "to ConsultAppR Email: $email")
+            Log.d(TAG, "to ConsultAppR Email: $email")
             val intent1 = Intent(this, ConsultAppR::class.java).apply {
                 putExtra("Email", email)    // Pasamos el email al intent
                 putExtra("UID", uid)
@@ -143,7 +136,7 @@ class MenuPrincipalActivity : AppCompatActivity() {
         }
 
         saveUbi.setOnClickListener {
-            Log.d("MenuPrincipalActivity", "to SaveUbicacionReal Email: $email")
+            Log.d(TAG, "to SaveUbicacionReal Email: $email")
             val intent = Intent(this, SaveUbicacionReal::class.java).apply {
                 putExtra("Email", email)    // Pasamos el email al intent
                 putExtra("UID", uid)
@@ -172,6 +165,12 @@ class MenuPrincipalActivity : AppCompatActivity() {
             startActivity(intent)   // Lanzamos la activity
         }
     }
+    @SuppressLint("MissingSuperCall")
+    override fun onBackPressed() {
+        val intent = Intent(this, HomeActivity::class.java)
+        startActivity(intent)
+        finish()
+    }
 
     // Función para obtener la ubicación actual (dummy para ejemplificar)
     private fun getCurrentLocation(): Pair<Double, Double> {
@@ -186,7 +185,7 @@ class MenuPrincipalActivity : AppCompatActivity() {
         val (latitude, longitude) = getCurrentLocation()
         val weatherService = RetrofitInstance.weatherService
 
-        weatherService.getCurrentWeather(latitude, longitude, apiKey).enqueue(object : Callback<WeatherResponse> {
+        weatherService.getCurrentWeather(latitude, longitude, apiKey!!).enqueue(object : Callback<WeatherResponse> {
             @SuppressLint("SetTextI18n")
             override fun onResponse(call: Call<WeatherResponse>, response: Response<WeatherResponse>) {
                 if (response.isSuccessful) {

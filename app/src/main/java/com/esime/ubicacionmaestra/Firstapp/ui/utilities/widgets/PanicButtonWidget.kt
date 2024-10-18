@@ -1,4 +1,4 @@
-package com.esime.ubicacionmaestra.Firstapp.ui.utilities
+package com.esime.ubicacionmaestra.Firstapp.ui.utilities.widgets
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager

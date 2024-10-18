@@ -1,4 +1,4 @@
-package com.esime.ubicacionmaestra.Firstapp.ui.utilities
+package com.esime.ubicacionmaestra.Firstapp.ui.utilities.broadcasts
 
 import android.content.BroadcastReceiver
 import android.content.Context

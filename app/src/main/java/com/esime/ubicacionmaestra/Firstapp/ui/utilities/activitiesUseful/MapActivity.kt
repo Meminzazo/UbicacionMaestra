@@ -1,16 +1,14 @@
-package com.esime.ubicacionmaestra.Firstapp.ui.utilities
+package com.esime.ubicacionmaestra.Firstapp.ui.utilities.activitiesUseful
 
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Color
-import android.location.Geocoder
+import android.location.Location
 import android.os.Bundle
 import android.util.Log
-import android.view.LayoutInflater
-import android.view.View
+import android.view.inputmethod.InputMethodManager
 import android.widget.*
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.esime.ubicacionmaestra.R
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -22,17 +20,13 @@ import com.google.android.gms.maps.model.CircleOptions
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.libraries.places.api.Places
-import com.google.android.libraries.places.api.model.AutocompleteSessionToken
 import com.google.android.libraries.places.api.model.Place
-import com.google.android.libraries.places.api.net.FetchPlaceRequest
 import com.google.android.libraries.places.api.net.PlacesClient
-import com.google.android.libraries.places.api.net.FindAutocompletePredictionsRequest
-import com.google.android.libraries.places.api.model.AutocompletePrediction
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener
 
 // Activity del mapa
-class MapActivity : AppCompatActivity(), OnMapReadyCallback {
+class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMyLocationButtonClickListener, GoogleMap.OnMyLocationClickListener {
     private lateinit var mMap: GoogleMap
     private var selectedLocation: LatLng? = null
     private var geofenceRadius: Float = 100f
@@ -46,7 +40,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
         supportActionBar?.hide()
         // Inicializar Places API
         Places.initialize(applicationContext, getString(R.string.google_maps_api_key))
-        val placesClient = Places.createClient(this)
+        placesClient = Places.createClient(this)
 
         // Obtener el mapa
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
@@ -54,62 +48,30 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
 
         val btnConfirmLocation: Button = findViewById(R.id.btnConfirmLocation)
         val radiusSeekBar: SeekBar = findViewById(R.id.radiusSeekBar)
-        val searchLocation: AutoCompleteTextView = findViewById(R.id.searchLocation)
 
-        // Configurar Autocomplete para búsqueda de lugares
-        val autocompleteSessionToken = AutocompleteSessionToken.newInstance()
-        val adapter = ArrayAdapter<String>(this, android.R.layout.simple_dropdown_item_1line)
-        searchLocation.setAdapter(adapter)
+        // Configurar AutocompleteSupportFragment para búsqueda de lugares
+        val autocompleteFragment = supportFragmentManager.findFragmentById(R.id.autocomplete_fragment) as AutocompleteSupportFragment
+        autocompleteFragment.setPlaceFields(listOf(Place.Field.ID, Place.Field.LAT_LNG, Place.Field.NAME))
+        autocompleteFragment.setOnPlaceSelectedListener(object : PlaceSelectionListener {
+            override fun onPlaceSelected(place: Place) {
 
-        searchLocation.addTextChangedListener(object : android.text.TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                val request = FindAutocompletePredictionsRequest.builder()
-                    .setSessionToken(autocompleteSessionToken)
-                    .setQuery(s.toString())
-                    .build()
+                val inputMethodManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+                inputMethodManager.hideSoftInputFromWindow(currentFocus?.windowToken, 0)
 
-                placesClient.findAutocompletePredictions(request).addOnSuccessListener { response ->
-                    val suggestions = response.autocompletePredictions.map { it.getFullText(null).toString() }
-                    adapter.clear()
-                    adapter.addAll(suggestions)
-                    adapter.notifyDataSetChanged()
-                }.addOnFailureListener { exception ->
-                    exception.printStackTrace()
+                // Mover la cámara a la ubicación seleccionada
+                val latLng = place.latLng
+                latLng?.let {
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(it, 15f))
+                    mMap.addMarker(MarkerOptions().position(it).title(place.name))
+                    selectedLocation = it
+                    updateGeofenceCircle()
                 }
             }
-            override fun afterTextChanged(s: android.text.Editable?) {}
+
+            override fun onError(status: com.google.android.gms.common.api.Status) {
+                Log.e("MapActivity", "Error al seleccionar el lugar: $status")
+            }
         })
-
-        searchLocation.setOnItemClickListener { _, _, position, _ ->
-            val selectedPrediction = adapter.getItem(position)
-            val request = FindAutocompletePredictionsRequest.builder()
-                .setSessionToken(autocompleteSessionToken)
-                .setQuery(selectedPrediction)
-                .build()
-
-            placesClient.findAutocompletePredictions(request).addOnSuccessListener { response ->
-                val prediction = response.autocompletePredictions.firstOrNull { it.getFullText(null).toString() == selectedPrediction }
-                prediction?.let {
-                    val placeId = it.placeId
-                    val placeFields = listOf(Place.Field.LAT_LNG)
-                    val fetchPlaceRequest = FetchPlaceRequest.builder(placeId, placeFields).build()
-                    placesClient.fetchPlace(fetchPlaceRequest).addOnSuccessListener { fetchResponse ->
-                        val latLng = fetchResponse.place.latLng
-                        latLng?.let {
-                            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
-                            mMap.addMarker(MarkerOptions().position(latLng).title("Ubicación seleccionada"))
-                            selectedLocation = latLng
-                            updateGeofenceCircle()
-                        }
-                    }.addOnFailureListener { exception ->
-                        exception.printStackTrace()
-                    }
-                }
-            }.addOnFailureListener { exception ->
-                exception.printStackTrace()
-            }
-        }
 
         btnConfirmLocation.setOnClickListener {
             // Enviar los datos seleccionados a la actividad principal
@@ -134,8 +96,12 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
         })
     }
 
+    @SuppressLint("MissingPermission")
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
+        mMap.setOnMyLocationButtonClickListener(this)
+        mMap.setOnMyLocationClickListener(this)
+        mMap.isMyLocationEnabled = true
 
         // Configuración inicial del mapa
         mMap.uiSettings.isZoomControlsEnabled = true
@@ -165,5 +131,18 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
                     .strokeWidth(2f)
             )
         }
+    }
+
+    override fun onMyLocationButtonClick(): Boolean {
+        Toast.makeText(
+            this,
+            "Ubicacion aproximada",
+            Toast.LENGTH_SHORT
+        ).show()
+        return false
+    }
+
+    override fun onMyLocationClick(p0: Location) {
+        TODO("Not yet implemented")
     }
 }
