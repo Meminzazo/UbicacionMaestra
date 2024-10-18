@@ -22,6 +22,9 @@
         android:theme="@style/Theme.UbicacionMaestra"
         tools:targetApi="31">
         <activity
+            android:name=".Firstapp.ui.utilities.MapActivity"
+            android:exported="false" />
+        <activity
             android:name=".Firstapp.ui.config.preferenceUserActivity"
             android:exported="false" />
         <activity

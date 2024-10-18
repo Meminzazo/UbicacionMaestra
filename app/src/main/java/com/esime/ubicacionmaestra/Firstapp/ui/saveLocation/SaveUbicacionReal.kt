@@ -2,6 +2,7 @@ package com.esime.ubicacionmaestra.Firstapp.ui.saveLocation
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.app.AlertDialog
 import android.app.PendingIntent
 import android.content.Context
@@ -26,6 +27,7 @@ import com.esime.ubicacionmaestra.Firstapp.ui.config.preferenceUserActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.home.MenuPrincipalActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.consult1To1.ConsultAppR
 import com.esime.ubicacionmaestra.Firstapp.ui.utilities.GeofenceBroadcastReceiver
+import com.esime.ubicacionmaestra.Firstapp.ui.utilities.MapActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.utilities.services.UbicacionGuardarService
 import com.esime.ubicacionmaestra.R
 import com.google.android.gms.common.api.ApiException
@@ -67,6 +69,7 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
     )
 
     private lateinit var map:GoogleMap
+    private lateinit var geofenceContainer: LinearLayout
 
     private var uid: String? = null
 
@@ -74,7 +77,7 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         const val TAG = "SaveUbicacionReal" // Definimos la variable TAG aqui
         const val PREFS_NAME = "SwitchPrefs"
         const val SWITCH_STATE = "switch_state"
-
+        const val REQUEST_CODE_MAP = 1
         const val LOCATION_PERMISSION_REQUEST_CODE = 1001
         const val BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE = 1002
         const val NOTIFICATION_PERMISSION_REQUEST_CODE = 1003
@@ -251,89 +254,111 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
     }
 
 
+    // Modificación de la función showGeofenceDialog() para abrir el mapa
     @SuppressLint("InflateParams")
     private fun showGeofenceDialog() {
-        // Inflar el layout del Dialog
         val inflater: LayoutInflater = LayoutInflater.from(this)
         val dialogView: View = inflater.inflate(R.layout.dialog_geofence_menu, null)
         val builder = AlertDialog.Builder(this)
-
         builder.setView(dialogView)
 
         val dialog = builder.create()
         val numGeofencesEditText: EditText = dialogView.findViewById(R.id.numGeofences)
-        val geofenceContainer: LinearLayout = dialogView.findViewById(R.id.geofenceContainer)
+        geofenceContainer = dialogView.findViewById(R.id.geofenceContainer)
         val btnAddGeofences: Button = dialogView.findViewById(R.id.btnAddGeofences)
         val btnGuardarGeofences = dialogView.findViewById<Button>(R.id.btnGuardarGeofences)
 
-        // Acción cuando se presiona el botón "Agregar Geovallas"
         btnAddGeofences.setOnClickListener {
             val numGeofences = numGeofencesEditText.text.toString().toIntOrNull()
 
             if (numGeofences != null && numGeofences > 0) {
-                geofenceContainer.removeAllViews() // Limpiar el contenedor antes de agregar nuevos campos
-
+                geofenceContainer.removeAllViews()
                 for (i in 1..numGeofences) {
                     addGeofenceFields(i, geofenceContainer)
                 }
             }
         }
 
-        // Acción cuando se presiona el botón "Guardar"
         btnGuardarGeofences.setOnClickListener {
-            // Extraer y guardar los datos de las geovallas
             val geofences = mutableListOf<GeofenceData>()
-            for (i in 0 until geofenceContainer.childCount step 4) {
+            for (i in 0 until geofenceContainer.childCount step 5) {
                 val name = (geofenceContainer.getChildAt(i) as EditText).text.toString()
                 val lat = (geofenceContainer.getChildAt(i + 1) as EditText).text.toString().toDoubleOrNull()
                 val lng = (geofenceContainer.getChildAt(i + 2) as EditText).text.toString().toDoubleOrNull()
                 val radius = (geofenceContainer.getChildAt(i + 3) as EditText).text.toString().toFloatOrNull()
+                val btnSelectLocation = geofenceContainer.getChildAt(i + 4) as Button
 
-                // Asignar valores por defecto o validar según tu necesidad
                 if (lat != null && lng != null && radius != null) {
                     geofences.add(GeofenceData(name, lat, lng, radius, "ENTER_EXIT"))
                 }
             }
-
-            // Aquí llamas a la función que guarda en la base de datos
             guardarGeofencesEnBaseDeDatos(geofences)
-
-            dialog.dismiss() // Cerrar el diálogo después de guardar
+            dialog.dismiss()
         }
         dialog.show()
     }
 
     private fun addGeofenceFields(index: Int, container: LinearLayout) {
         val context = this
-
         // Texto para el nombre de la geovalla
         val geofenceName = EditText(context).apply {
             hint = "Nombre de geovalla $index"
         }
-
         // Campo para la latitud
         val latField = EditText(context).apply {
             hint = "Latitud geovalla $index"
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED
+            tag = "latField_$index"
         }
-
         // Campo para la longitud
         val lngField = EditText(context).apply {
             hint = "Longitud geovalla $index"
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED
+            tag = "lngField_$index"
         }
-
         // Campo para el radio
         val radioField = EditText(context).apply {
             hint = "Radio geovalla $index"
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
         }
-
+        // Botón para seleccionar ubicación en el mapa
+        val btnSelectLocation = Button(context).apply {
+            text = "Seleccionar ubicación para geovalla $index"
+            tag = "btnSelectLocation_$index"
+            setOnClickListener {
+                val mapIntent = Intent(context, MapActivity::class.java)
+                mapIntent.putExtra("geofenceIndex", index)
+                startActivityForResult(mapIntent, REQUEST_CODE_MAP)
+            }
+        }
         // Agregar los campos al contenedor
         container.addView(geofenceName)
         container.addView(latField)
         container.addView(lngField)
         container.addView(radioField)
+        container.addView(btnSelectLocation)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_CODE_MAP && resultCode == Activity.RESULT_OK) {
+            val latitude = data?.getDoubleExtra("latitude", 0.0)
+            val longitude = data?.getDoubleExtra("longitude", 0.0)
+            val radius = data?.getFloatExtra("radius", 100f) ?: 100f
+            val geofenceIndex = data?.getIntExtra("geofenceIndex", -1) ?: -1
+            Log.d(TAG, "Latitud: $latitude, Longitud: $longitude, GeofenceIndex: $geofenceIndex")
+
+            if (latitude != null && longitude != null && geofenceIndex != -1) {
+                geofenceContainer.post {
+                    val latField = geofenceContainer.findViewWithTag<EditText>("latField_$geofenceIndex")
+                    val lngField = geofenceContainer.findViewWithTag<EditText>("lngField_$geofenceIndex")
+                    val radiusField = geofenceContainer.findViewWithTag<EditText>("radiusField_$geofenceIndex")
+                    latField?.setText(latitude.toString())
+                    lngField?.setText(longitude.toString())
+                    radiusField?.setText(radius.toString())
+                }
+            }
+        }
     }
 
     private fun guardarGeofencesEnBaseDeDatos(geofences: List<GeofenceData>) {
@@ -346,11 +371,8 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
     }
 
     fun writeNewUser(name: String, latitud: String, longitud: String, radius: String) {
-
         database = Firebase.database.reference
-
         val user = User(name, latitud, longitud, radius)
-
         database.child("users").child(uid!!).child("Geovallas").child(name).setValue(user)
     }
 
