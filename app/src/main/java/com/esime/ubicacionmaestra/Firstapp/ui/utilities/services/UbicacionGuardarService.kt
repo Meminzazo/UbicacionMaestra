@@ -76,6 +76,8 @@ class UbicacionGuardarService : Service() {
 
     // Función para iniciar el servicio
     private fun startLocationTraking(uid: String?) {
+        val sharedPreferences = getSharedPreferences("MapSettings", Context.MODE_PRIVATE)
+        val savedTime = sharedPreferences.getInt("guardado_tiempo", 10) * 1000L // Obtener el tiempo de guardado de ubicación en milisegundos
         serviceJob = serviceScope.launch {  // Inicia la corrutina del servicio
             while (isActive) {  // Mientras la corrutina esté activa
                 val result = locationService.getUserLocation(this@UbicacionGuardarService)  // Obtiene la ubicación del usuario de la LocationService
@@ -93,7 +95,9 @@ class UbicacionGuardarService : Service() {
                     // Actualizar los datos de latitud y longitud
                     userRef.child("$uid").updateChildren(mapOf(
                         "latitud" to result?.latitude.toString(),
-                        "longitud" to result?.longitude.toString()
+                        "longitud" to result?.longitude.toString(),
+                        "timestamp" to System.currentTimeMillis(),
+                        "date" to SimpleDateFormat("dd/MMMM/yyyy", Locale.getDefault()).format(Date())
                     )).addOnSuccessListener {
                         // Aquí puedes manejar lo que suceda después de una actualización exitosa
                         Log.d(TAG, "Latitud y longitud actualizadas correctamente")
@@ -102,7 +106,7 @@ class UbicacionGuardarService : Service() {
                         Log.e(TAG, "Error al actualizar latitud y longitud", it)
                     }
                 }
-                delay(15000)    // Espera 30 segundos antes de la próxima consulta de ubicación
+                delay(savedTime)    // Espera 30 segundos antes de la próxima consulta de ubicación
             }
         }
     }

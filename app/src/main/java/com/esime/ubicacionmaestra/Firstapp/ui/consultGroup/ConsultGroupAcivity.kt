@@ -9,7 +9,13 @@ import android.graphics.BitmapFactory
 import android.location.Location
 import android.os.Bundle
 import android.util.Log
+import android.view.Gravity
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.PopupWindow
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -35,6 +41,9 @@ import com.google.firebase.database.ValueEventListener
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
     GoogleMap.OnMyLocationButtonClickListener, GoogleMap.OnMyLocationClickListener {
@@ -136,6 +145,59 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
                 }
             }
         }
+// Bucle para configurar los ImageView
+        for (i in Imageviewlist.indices) {
+            Imageviewlist[i].setOnClickListener {
+                val uid = uidList[i] // Obtén el UID correspondiente para este ImageView
+                if (uid != null && uid.isNotEmpty()) {
+                    // Referencia a la base de datos en el nodo de 'users' y el UID correspondiente
+                    val userRef = database.child("users").child(uid)
+
+                    // Consultar la base de datos para obtener la información relevante
+                    userRef.addListenerForSingleValueEvent(object : ValueEventListener {
+                        override fun onDataChange(snapshot: DataSnapshot) {
+                            if (snapshot.exists()) {
+                                // Obtener los valores de 'date' y 'timestamp' desde el snapshot
+                                val miembro = "Miembro #${i + 1}"
+                                val fecha = snapshot.child("date").getValue(String::class.java) ?: "00/00/0000"
+                                val hora = snapshot.child("timestamp").getValue(Double::class.java) ?: 0.0
+
+                                val hourFormated = convertirTimestamp(hora.toLong())
+
+                                Log.d(TAG, "Miembro: $miembro, Fecha: $fecha y hora: $hourFormated")
+
+                                // Mostrar la información en un PopupWindow
+                                showMemberPopup(it, miembro, fecha, hourFormated)
+                            } else {
+                                Log.w(TAG, "No se encontró información para el UID: $uid")
+                            }
+                        }
+
+                        override fun onCancelled(error: DatabaseError) {
+                            // Manejo de error
+                            Log.e(TAG, "Error al consultar la base de datos: ${error.message}")
+                        }
+                    })
+                } else {
+                    Log.w(TAG, "UID vacío en la posición $i")
+                }
+            }
+        }
+
+    }
+    private fun convertirTimestamp(timestamp: Long): String {
+        return try {
+            // Crea una instancia de Date usando el timestamp en milisegundos
+            val date = Date(timestamp)
+
+            // Define el formato de salida que será hh:mm:ss
+            val format = SimpleDateFormat("hh:mm:ss a", Locale.getDefault())
+
+            // Retorna la fecha formateada
+            format.format(date)
+        } catch (e: Exception) {
+            "Hora no disponible" // En caso de error
+        }
     }
 
     // Función para agregar el listener de ubicación para cada miembro
@@ -200,6 +262,31 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
             postReference.addValueEventListener(locationListeners[index]!!)
         }
     }
+    private fun showMemberPopup(anchorView: View, miembro: String, fecha: String, hora: String) {
+        // Inflar el diseño del popup
+        val popupView = LayoutInflater.from(this).inflate(R.layout.popup_info, null)
+
+        // Crear el PopupWindow
+        val popupWindow = PopupWindow(
+            popupView,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            true // Permite que el popup se cierre al hacer clic fuera de él
+        )
+
+        // Configurar el contenido del popup
+        val miembroText = popupView.findViewById<TextView>(R.id.miembro)
+        val fechaText = popupView.findViewById<TextView>(R.id.fecha)
+        val horaText = popupView.findViewById<TextView>(R.id.hora)
+
+        // Establecer el texto en los TextView
+        miembroText.text = miembro
+        fechaText.text = fecha
+        horaText.text = hora
+
+        // Mostrar el PopupWindow cerca del ImageView
+        popupWindow.showAsDropDown(anchorView, 0, -anchorView.height, Gravity.START)
+    }
 
     // Función para eliminar todos los listeners
     private fun removeListeners() {
@@ -215,7 +302,6 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
             }
         }
     }
-
     private fun setupMap() {
         val sharedPreferences = getSharedPreferences("MapSettings", Context.MODE_PRIVATE)
         val mapType = sharedPreferences.getInt("map_type", GoogleMap.MAP_TYPE_NORMAL)
@@ -224,7 +310,6 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
         map.mapType = mapType
         map.isTrafficEnabled = trafficEnabled
     }
-
     private fun cargarFoto(photoUrl: String, imageView: ImageView) {
         val storageRef = FirebaseStorage.getInstance().getReferenceFromUrl(photoUrl)
         val localFile = File.createTempFile("tempImage", "jpg")
@@ -236,8 +321,6 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
             Log.e(TAG, "Error al cargar la imagen: ${it.message}")
         }
     }
-
-
     ////////////////////////////////// COSAS QUE HACEN QUE FUNCIONE EL MAPA ///////////////////////////////////////////////
     private fun createFragment() {
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
@@ -253,13 +336,11 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
         map.moveCamera(com.google.android.gms.maps.CameraUpdateFactory.newLatLngZoom(mexicoCity, 5f))
     }
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
     // Verificar el estado del permiso de ubicación
     private fun isLocationPermissionGranted() = ContextCompat.checkSelfPermission(
         this,
         Manifest.permission.ACCESS_FINE_LOCATION
     ) == PackageManager.PERMISSION_GRANTED
-
     // Solicitar si la ubicacion esta activa
     @SuppressLint("MissingPermission")
     private fun enableLocation() {
@@ -270,7 +351,6 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
             requestLocationPermission()
         }
     }
-
     // Solicitar el permiso de ubicación
     private fun requestLocationPermission() {
         if (ActivityCompat.shouldShowRequestPermissionRationale(
@@ -290,7 +370,6 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
             )
         }
     }
-
     // Respuesta del permiso de ubicación
     @SuppressLint("MissingPermission", "MissingSuperCall")
     override fun onRequestPermissionsResult(
@@ -312,7 +391,6 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
             else -> {}
         }
     }
-
     //////////////////////////////////////////////// MAS PARA EL MAPA ////////////////////////////////////////////////////////////////
     @SuppressLint("MissingPermission")
     override fun onResumeFragments() {
@@ -327,7 +405,6 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
             ).show()
         }
     }
-
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Boton de ubicacion para saber tu ubicacion
     override fun onMyLocationButtonClick(): Boolean {
@@ -338,7 +415,6 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
         ).show()
         return false
     }
-
     // Cuando se hace click en la ubicacion muestra las coordenadas
     override fun onMyLocationClick(p0: Location) {
         Toast.makeText(

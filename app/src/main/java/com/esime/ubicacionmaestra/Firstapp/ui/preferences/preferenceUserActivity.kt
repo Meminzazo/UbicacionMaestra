@@ -137,7 +137,39 @@ class preferenceUserActivity : AppCompatActivity() {
         switchTraffic.setOnCheckedChangeListener { _, isChecked ->
             saveTrafficEnabled(isChecked)
         }
+
+        // Inicializa el Spinner y SharedPreferences
+        val spinnerGuardadoTiempo = findViewById<Spinner>(R.id.spinner_guardado_tiempo)
+        val timesArray = arrayOf("10", "20", "40", "120", "360")
+
+        // Crea un adaptador para el spinner
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, timesArray)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerGuardadoTiempo.adapter = adapter
+
+        // Carga la preferencia guardada
+        val savedTime = sharedPreferences.getInt("guardado_tiempo", 10)
+        spinnerGuardadoTiempo.setSelection(timesArray.indexOf(savedTime.toString()))
+
+        // Guarda las preferencias cuando cambien
+        spinnerGuardadoTiempo.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val selectedTime = timesArray[position].toInt()
+                saveGuardadoTiempo(selectedTime)
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
     }
+    // Método para guardar el tiempo seleccionado
+    private fun saveGuardadoTiempo(guardadoTiempo: Int) {
+        with(sharedPreferences.edit()) {
+            putInt("guardado_tiempo", guardadoTiempo)
+            apply()
+        }
+    }
+
     // Guardar la preferencia en SharedPreferences
     private fun saveEarthquakeMonitoringPreference(isEnabled: Boolean) {
         val editor = sharedPreferences.edit()

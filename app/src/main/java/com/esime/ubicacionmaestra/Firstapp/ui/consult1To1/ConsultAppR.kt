@@ -49,6 +49,9 @@ import com.google.firebase.database.database
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
     GoogleMap.OnMyLocationButtonClickListener, GoogleMap.OnMyLocationClickListener {
@@ -68,6 +71,8 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
 
     private lateinit var photoPerfil: ImageView
     private lateinit var nombresubi: TextView
+    private lateinit var dates: TextView
+    private lateinit var hours: TextView
 
     private var uid: String? = null
     private var uidToConsult: String? = null
@@ -116,6 +121,8 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
         val uidList = mutableListOf<String>()
         nombresubi = findViewById(R.id.NombreUsuario)
         photoPerfil = findViewById(R.id.photoPerfil)
+        dates = findViewById(R.id.date)
+        hours = findViewById(R.id.hour)
 
         // El mapa
         createFragment()
@@ -272,11 +279,18 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                                             .getValue(String::class.java)?.toDoubleOrNull()
                                         val longitud = dataSnapshot.child("longitud")
                                             .getValue(String::class.java)?.toDoubleOrNull()
+                                        val date = dataSnapshot.child("date")
+                                            .getValue(String::class.java)
+                                        val hour = dataSnapshot.child("timestamp")
+                                            .getValue(Long::class.java)
 
-                                        if (latitud != null && longitud != null) {
+                                        val hourFormated = convertirTimestamp(hour!!)
+
+                                        if (latitud != null && longitud != null && date != null) {
                                             Log.i(TAG, "Latitud: $latitud, Longitud: $longitud")
                                             val coordinates = LatLng(latitud, longitud)
-
+                                            dates.text = date
+                                            hours.text = hourFormated
                                             currentMarker?.remove()
 
                                             currentMarker = map.addMarker(
@@ -330,6 +344,20 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
 
 
             }
+        }
+    }
+    private fun convertirTimestamp(timestamp: Long): String {
+        return try {
+            // Crea una instancia de Date usando el timestamp en milisegundos
+            val date = Date(timestamp)
+
+            // Define el formato de salida que será hh:mm:ss
+            val format = SimpleDateFormat("hh:mm:ss a", Locale.getDefault())
+
+            // Retorna la fecha formateada
+            format.format(date)
+        } catch (e: Exception) {
+            "Hora no disponible" // En caso de error
         }
     }
 
