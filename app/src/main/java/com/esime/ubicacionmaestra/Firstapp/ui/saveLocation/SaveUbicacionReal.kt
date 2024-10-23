@@ -20,20 +20,24 @@ import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.esime.ubicacionmaestra.Firstapp.ui.preferences.preferenceUserActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.home.MenuPrincipalActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.consult1To1.ConsultAppR
+import com.esime.ubicacionmaestra.Firstapp.ui.utilities.activitiesUseful.DetallesDelitosActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.utilities.broadcasts.GeofenceBroadcastReceiver
 import com.esime.ubicacionmaestra.Firstapp.ui.utilities.activitiesUseful.MapActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.utilities.broadcasts.BatteryMapReceiver
 import com.esime.ubicacionmaestra.Firstapp.ui.utilities.services.UbicacionGuardarService
 import com.esime.ubicacionmaestra.R
 import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.Geofence
 import com.google.android.gms.location.GeofenceStatusCodes
 import com.google.android.gms.location.GeofencingClient
@@ -49,7 +53,14 @@ import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.firebase.Firebase
 import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.database
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
+import kotlin.math.pow
+import kotlin.math.sqrt
 
 
 class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMyLocationButtonClickListener, GoogleMap.OnMyLocationClickListener  {
@@ -73,7 +84,7 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
 
     private lateinit var map:GoogleMap
     private lateinit var geofenceContainer: LinearLayout
-
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
     private var uid: String? = null
 
     companion object {
@@ -91,22 +102,13 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
     private lateinit var geofencingClient: GeofencingClient
 
 
-    @SuppressLint("MissingInflatedId")
+    @SuppressLint("MissingInflatedId", "MissingPermission")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_save_ubicacion_real)
 
         requestNotificationPermission()
         requestLocationPermission()
-
-        geofencingClient = LocationServices.getGeofencingClient(this)
-
-        // Registrar el BroadcastReceiver para el nivel de batería (cambiar tipo de mapa)
-        batteryMapReceiver = BatteryMapReceiver()
-        val batteryStatusIntentFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-        registerReceiver(batteryMapReceiver, batteryStatusIntentFilter)
-
-
         supportActionBar?.hide()
         val bundle = intent.extras
         //val email = bundle?.getString("Email")
@@ -114,12 +116,60 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
 
         Log.d(TAG, "UID: $uid")
         createFragment()
+        geofencingClient = LocationServices.getGeofencingClient(this)
+
+        // Registrar el BroadcastReceiver para el nivel de batería (cambiar tipo de mapa)
+        batteryMapReceiver = BatteryMapReceiver()
+        val batteryStatusIntentFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        registerReceiver(batteryMapReceiver, batteryStatusIntentFilter)
+
+        database = FirebaseDatabase.getInstance().reference.child("denuncias")
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+
+        val btnIndice = findViewById<Button>(R.id.btn_indice_delictivo)
+        val vinetaDelictivo = findViewById<androidx.cardview.widget.CardView>(R.id.vineta_delictivo)
+        val progressBar = findViewById<ProgressBar>(R.id.termometro_delictivo)
+        val btnMasInformacion = findViewById<Button>(R.id.btn_mas_informacion)
 
         val ConfiButton = findViewById<Button>(R.id.AjustesButton)
         val switchUbicacionReal = findViewById<SwitchMaterial>(R.id.UbicacionReal) as SwitchMaterial
         val sharedPrefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val btnAjustes = findViewById<Button>(R.id.btnAjustes)
         switchUbicacionReal.isChecked = sharedPrefs.getBoolean(SWITCH_STATE, false)
+
+        btnIndice.setOnClickListener {
+            // Mostrar la viñeta
+            vinetaDelictivo.visibility = View.GONE
+
+            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                if (location != null) {
+                    val latitud = location.latitude
+                    val longitud = location.longitude
+                    Log.d(TAG, "Latitud: $latitud, Longitud: $longitud")
+                    // Consultar Firebase y calcular el índice delictivo
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        val indiceDelictivo = calcularIndiceDelictivo(latitud, longitud)
+                        withContext(Dispatchers.Main) {
+                            if (indiceDelictivo > 0) {
+                                // Mostrar la viñeta con el índice delictivo
+                                vinetaDelictivo.visibility = View.VISIBLE
+                                progressBar.max = 100
+                                progressBar.progress = indiceDelictivo
+                            } else {
+                                Log.w(TAG, "No se encontraron delitos cercanos para mostrar el índice.")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        btnMasInformacion.setOnClickListener {
+            // Navegar a otra Activity con más detalles
+            val intent = Intent(this, DetallesDelitosActivity::class.java)
+            startActivity(intent)
+        }
+
 
         ConfiButton.setOnClickListener {view ->
             showGeofenceDialog()
@@ -158,11 +208,75 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
             }
         }
     }
+    private suspend fun calcularIndiceDelictivo(latitudUsuario: Double, longitudUsuario: Double, radioKm: Double = 2.0): Int {
+        return withContext(Dispatchers.IO) {
+            val delitosCercanos = mutableListOf<Map<String, Any>>()
+
+            // Definir el rango de latitud y longitud basado en el radio en km
+            val latitudMin = latitudUsuario - kmToLatitudeDegrees(radioKm)
+            val latitudMax = latitudUsuario + kmToLatitudeDegrees(radioKm)
+            val longitudMin = longitudUsuario - kmToLongitudeDegrees(radioKm, latitudUsuario)
+            val longitudMax = longitudUsuario + kmToLongitudeDegrees(radioKm, latitudUsuario)
+
+            val query = database.orderByChild("latitud").startAt(latitudMin).endAt(latitudMax)
+            val snapshot = query.get().await()
+
+            if (snapshot.exists()) {
+                for (delitoSnapshot in snapshot.children) {
+                    val latitudDelito = delitoSnapshot.child("latitud").getValue(Double::class.java)
+                    val longitudDelito = delitoSnapshot.child("longitud").getValue(Double::class.java)
+                    val categoriaDelito = delitoSnapshot.child("categoria_delito").getValue(String::class.java)
+                    Log.d(TAG, "Latitud: $latitudDelito, Longitud: $longitudDelito, Categoria: $categoriaDelito")
+
+                    if (latitudDelito != null && longitudDelito != null && categoriaDelito != null && categoriaDelito != "Hecho no delictivo") {
+                        // Verificar si la longitud está dentro del rango
+                        if (latitudDelito in latitudMin..latitudMax && longitudDelito in longitudMin..longitudMax) {
+                            val distancia = calcularDistancia(latitudUsuario, longitudUsuario, latitudDelito, longitudDelito)
+                            if (distancia <= radioKm) {
+                                delitosCercanos.add(delitoSnapshot.value as Map<String, Any>)
+                            }
+                        }
+                    } else {
+                        Log.w(TAG, "Registro con datos incompletos encontrado, saltándolo.")
+                    }
+                }
+            } else {
+                Log.w(TAG, "No se encontraron datos dentro del rango especificado.")
+            }
+            Log.d(TAG, "Delitos cercanos encontrados: $delitosCercanos")
+            // Aquí calculamos el índice delictivo proporcionalmente
+            return@withContext (delitosCercanos.size * 10).coerceAtMost(100) // Escalar de 0 a 100
+        }
+    }
+
+
+    private fun kmToLatitudeDegrees(km: Double): Double {
+        val earthRadius = 6371.0
+        return (km / earthRadius) * (180 / Math.PI)
+    }
+
+    private fun kmToLongitudeDegrees(km: Double, latitude: Double): Double {
+        val earthRadius = 6371.0
+        val radiusAtLatitude = earthRadius * Math.cos(Math.toRadians(latitude))
+        return (km / radiusAtLatitude) * (180 / Math.PI)
+    }
+
+
+    private fun calcularDistancia(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val radioTierra = 6371.0 // Radio de la Tierra en km
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val a = Math.sin(dLat / 2).pow(2.0) +
+                Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                Math.sin(dLon / 2).pow(2.0)
+        val c = 2 * Math.atan2(sqrt(a), sqrt(1 - a))
+        return radioTierra * c
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         unregisterReceiver(batteryMapReceiver) // Importante: liberar el receptor para evitar pérdidas de memoria
     }
-
     private fun setupMap() {
         val sharedPreferences = getSharedPreferences("MapSettings", Context.MODE_PRIVATE)
         val mapType = sharedPreferences.getInt("map_type", GoogleMap.MAP_TYPE_NORMAL)
@@ -171,7 +285,6 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         map.mapType = mapType
         map.isTrafficEnabled = trafficEnabled
     }
-
     @SuppressLint("MissingPermission")
     private fun addGeofence(nombre: String?, latitud: Double?, longitud: Double?, radio: Float?) {
 
@@ -224,7 +337,6 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
                     Log.e("Geofence", errorMessage, e)
                 }
     }
-
     private fun consultaGeofence() {
         val mDatabase = Firebase.database.reference
         Log.i(TAG, "Consulta de geovallas id: $uid")
@@ -252,8 +364,6 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
             Log.e(TAG, "UID es null")
         }
     }
-
-
     private fun mostrarGeovalla(nombre: String?, latitud: Double?, longitud: Double?, radio: Float?) {
         val circleOptions = CircleOptions()
             .center(LatLng(latitud!!, longitud!!))
@@ -264,8 +374,6 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         map.addMarker(MarkerOptions().position(LatLng(latitud, longitud)).title(nombre))
         map.addCircle(circleOptions)
     }
-
-
     // Modificación de la función showGeofenceDialog() para abrir el mapa
     @SuppressLint("InflateParams")
     private fun showGeofenceDialog() {
@@ -309,7 +417,6 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         }
         dialog.show()
     }
-
     private fun addGeofenceFields(index: Int, container: LinearLayout) {
         val context = this
         // Texto para el nombre de la geovalla
@@ -350,7 +457,6 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         container.addView(radioField)
         container.addView(btnSelectLocation)
     }
-
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_CODE_MAP && resultCode == Activity.RESULT_OK) {
@@ -372,7 +478,6 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
             }
         }
     }
-
     private fun guardarGeofencesEnBaseDeDatos(geofences: List<GeofenceData>) {
         // Aquí puedes agregar tu lógica para guardar en Firebase u otro almacenamiento
         geofences.forEach { geofence ->
@@ -381,18 +486,15 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
             writeNewUser(geofence.name, geofence.latitude.toString(), geofence.longitude.toString(), geofence.radius.toString())
         }
     }
-
     fun writeNewUser(name: String, latitud: String, longitud: String, radius: String) {
         database = Firebase.database.reference
         val user = User(name, latitud, longitud, radius)
         database.child("users").child(uid!!).child("Geovallas").child(name).setValue(user)
     }
-
     private fun createFragment(){
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
     }
-
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
         enableLocation()
@@ -403,17 +505,14 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         map.setOnMyLocationClickListener(this)
         consultaGeofence()
     }
-
     private fun isLocationPermissionGranted() = ContextCompat.checkSelfPermission(
         this,
         Manifest.permission.ACCESS_FINE_LOCATION
     ) == PackageManager.PERMISSION_GRANTED
-
     private fun isBackgroundLocationPermissionGranted() = ContextCompat.checkSelfPermission(
         this,
         Manifest.permission.ACCESS_BACKGROUND_LOCATION
     ) == PackageManager.PERMISSION_GRANTED
-
     @SuppressLint("MissingPermission")
     private fun enableLocation(){
         if(!::map.isInitialized) return
@@ -423,7 +522,6 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
             requestLocationPermission()
         }
     }
-
     private fun requestLocationPermission(){
         if(ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
             Toast.makeText(
@@ -437,7 +535,6 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
             )
         }
     }
-
     @SuppressLint("MissingPermission", "MissingSuperCall")
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         when (requestCode) {
@@ -480,7 +577,6 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
             }
         }
     }
-
     private fun requestBackgroundLocationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             if (!isBackgroundLocationPermissionGranted()) {
@@ -492,7 +588,6 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
             }
         }
     }
-
     @SuppressLint("MissingPermission")
     override fun onResumeFragments() {
         super.onResumeFragments()
@@ -506,7 +601,6 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
             ).show()
         }
     }
-
     override fun onMyLocationButtonClick(): Boolean {
         Toast.makeText(
             this,
@@ -515,7 +609,6 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         ).show()
         return false
     }
-
     override fun onMyLocationClick(p0: Location) {
         Toast.makeText(
             this,
@@ -523,7 +616,6 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
             Toast.LENGTH_SHORT
         ).show()
     }
-
     private fun requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(
@@ -546,5 +638,4 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
             googleMap.mapType = GoogleMap.MAP_TYPE_NONE
         }
     }
-
 }
