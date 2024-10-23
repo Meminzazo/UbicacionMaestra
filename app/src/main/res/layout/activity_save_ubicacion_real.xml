@@ -15,7 +15,6 @@
         android:layout_height="wrap_content"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/textView2" />
 
@@ -92,7 +91,8 @@
                 android:layout_height="200dp"
                 app:sv_unit="Índice Delictivo"
                 app:sv_withTremble="true"
-                android:layout_gravity="center" />
+                android:layout_gravity="center"
+                tools:ignore="MissingClass" />
 
             <Button
                 android:id="@+id/btn_mas_informacion"
