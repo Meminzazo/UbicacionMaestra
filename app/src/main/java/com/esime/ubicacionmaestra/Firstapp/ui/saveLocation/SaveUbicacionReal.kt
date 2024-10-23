@@ -16,6 +16,7 @@ import android.os.Bundle
 import android.text.InputType
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -24,6 +25,7 @@ import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
@@ -36,6 +38,7 @@ import com.esime.ubicacionmaestra.Firstapp.ui.utilities.activitiesUseful.MapActi
 import com.esime.ubicacionmaestra.Firstapp.ui.utilities.broadcasts.BatteryMapReceiver
 import com.esime.ubicacionmaestra.Firstapp.ui.utilities.services.UbicacionGuardarService
 import com.esime.ubicacionmaestra.R
+import com.github.anastr.speedviewlib.SpeedView
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.Geofence
@@ -102,7 +105,7 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
     private lateinit var geofencingClient: GeofencingClient
 
 
-    @SuppressLint("MissingInflatedId", "MissingPermission")
+    @SuppressLint("MissingInflatedId", "MissingPermission", "ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_save_ubicacion_real)
@@ -128,9 +131,9 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
 
         val btnIndice = findViewById<Button>(R.id.btn_indice_delictivo)
         val vinetaDelictivo = findViewById<androidx.cardview.widget.CardView>(R.id.vineta_delictivo)
-        val progressBar = findViewById<ProgressBar>(R.id.termometro_delictivo)
+        val speedView = findViewById<SpeedView>(R.id.termometro_delictivo)
         val btnMasInformacion = findViewById<Button>(R.id.btn_mas_informacion)
-
+        val mainLayout = findViewById<ConstraintLayout>(R.id.constraintLayout)
         val ConfiButton = findViewById<Button>(R.id.AjustesButton)
         val switchUbicacionReal = findViewById<SwitchMaterial>(R.id.UbicacionReal) as SwitchMaterial
         val sharedPrefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -153,8 +156,8 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
                             if (indiceDelictivo > 0) {
                                 // Mostrar la viñeta con el índice delictivo
                                 vinetaDelictivo.visibility = View.VISIBLE
-                                progressBar.max = 100
-                                progressBar.progress = indiceDelictivo
+                                vinetaDelictivo.bringToFront()
+                                speedView.speedTo(indiceDelictivo.toFloat(), 200) // Actualizar el valor del galvanómetro con animación
                             } else {
                                 Log.w(TAG, "No se encontraron delitos cercanos para mostrar el índice.")
                             }
@@ -162,6 +165,29 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
                     }
                 }
             }
+        }
+        // Detectar toque fuera del CardView
+        mainLayout.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_DOWN) {
+                // Si el CardView está visible y el usuario toca fuera del CardView, se oculta
+                if (vinetaDelictivo.visibility == View.VISIBLE) {
+                    val cardViewLocation = IntArray(2)
+                    vinetaDelictivo.getLocationOnScreen(cardViewLocation)
+                    val x = event.rawX
+                    val y = event.rawY
+
+                    val left = cardViewLocation[0]
+                    val top = cardViewLocation[1]
+                    val right = left + vinetaDelictivo.width
+                    val bottom = top + vinetaDelictivo.height
+
+                    if (x < left || x > right || y < top || y > bottom) {
+                        vinetaDelictivo.visibility = View.GONE
+                        btnIndice.visibility = View.VISIBLE  // Restaurar visibilidad del botón
+                    }
+                }
+            }
+            false
         }
 
         btnMasInformacion.setOnClickListener {
@@ -208,9 +234,10 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
             }
         }
     }
-    private suspend fun calcularIndiceDelictivo(latitudUsuario: Double, longitudUsuario: Double, radioKm: Double = 2.0): Int {
+    private suspend fun calcularIndiceDelictivo(latitudUsuario: Double, longitudUsuario: Double, radioKm: Double = 0.5): Int {
         return withContext(Dispatchers.IO) {
             val delitosCercanos = mutableListOf<Map<String, Any>>()
+            var totalDelitos = 0.0
 
             // Definir el rango de latitud y longitud basado en el radio en km
             val latitudMin = latitudUsuario - kmToLatitudeDegrees(radioKm)
@@ -233,7 +260,12 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
                         if (latitudDelito in latitudMin..latitudMax && longitudDelito in longitudMin..longitudMax) {
                             val distancia = calcularDistancia(latitudUsuario, longitudUsuario, latitudDelito, longitudDelito)
                             if (distancia <= radioKm) {
-                                delitosCercanos.add(delitoSnapshot.value as Map<String, Any>)
+                                // Contar los delitos según su categoría
+                                if (categoriaDelito == "DELITO DE BAJO IMPACTO") {
+                                    totalDelitos += 0.1
+                                } else {
+                                    totalDelitos += 1.0
+                                }
                             }
                         }
                     } else {
@@ -242,12 +274,25 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
                 }
             } else {
                 Log.w(TAG, "No se encontraron datos dentro del rango especificado.")
+                totalDelitos = 0.0
             }
-            Log.d(TAG, "Delitos cercanos encontrados: $delitosCercanos")
-            // Aquí calculamos el índice delictivo proporcionalmente
-            return@withContext (delitosCercanos.size * 10).coerceAtMost(100) // Escalar de 0 a 100
+            // Definir la población en riesgo para el área (valor simulado para este ejemplo)
+            val poblacionEnRiesgo = 100000  // Esto puede cambiar dependiendo de la alcaldía o datos reales
+
+            // Cálculo de la tasa de criminalidad
+            val tasaCriminalidad = if (poblacionEnRiesgo > 0) {
+                ((totalDelitos / poblacionEnRiesgo) * 100000).toInt()
+            } else {
+                0
+            }
+
+            Log.d(TAG, "Número de delitos: $totalDelitos, Población en riesgo: $poblacionEnRiesgo, Tasa de criminalidad: $tasaCriminalidad")
+
+            // Devolver la tasa de criminalidad como el índice delictivo
+            return@withContext tasaCriminalidad.coerceAtMost(100) // Escalar a un valor de 0 a 100 para el termómetro
         }
     }
+
 
 
     private fun kmToLatitudeDegrees(km: Double): Double {
