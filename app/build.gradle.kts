@@ -68,7 +68,6 @@ dependencies {
     implementation("com.google.firebase:firebase-database")
     implementation("com.google.firebase:firebase-firestore-ktx:25.0.0")
     implementation("com.google.firebase:firebase-database-ktx")
-    implementation("com.google.android.gms:play-services-location:21.2.0")
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth:22.3.1")
     implementation("com.android.support:multidex:1.0.3")
@@ -77,7 +76,7 @@ dependencies {
     implementation("com.google.firebase:firebase-analytics")
     // Maps SDK for Androi
     implementation("com.google.android.gms:play-services-maps:18.2.0")
-
+    implementation("com.github.anastr:speedviewlib:1.5.5")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
 
     implementation("com.github.yalantis:ucrop:2.2.8")

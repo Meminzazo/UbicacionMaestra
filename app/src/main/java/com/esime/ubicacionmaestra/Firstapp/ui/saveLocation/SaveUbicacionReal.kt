@@ -16,6 +16,7 @@ import android.os.Bundle
 import android.text.InputType
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -24,6 +25,7 @@ import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
@@ -36,6 +38,7 @@ import com.esime.ubicacionmaestra.Firstapp.ui.utilities.activitiesUseful.MapActi
 import com.esime.ubicacionmaestra.Firstapp.ui.utilities.broadcasts.BatteryMapReceiver
 import com.esime.ubicacionmaestra.Firstapp.ui.utilities.services.UbicacionGuardarService
 import com.esime.ubicacionmaestra.R
+import com.github.anastr.speedviewlib.SpeedView
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.Geofence
@@ -61,7 +64,7 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import kotlin.math.pow
 import kotlin.math.sqrt
-
+import java.io.Serializable
 
 class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMyLocationButtonClickListener, GoogleMap.OnMyLocationClickListener  {
 
@@ -73,6 +76,14 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         val radius: Float = 100f,
         val transitionTypes: String
     )
+
+    data class Delito(
+        val latitud: Double,
+        val longitud: Double,
+        val categoriaDelito: String,
+        val delito: String
+    ) : Serializable
+
 
     data class User(
         val name: String? = "-",
@@ -102,7 +113,7 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
     private lateinit var geofencingClient: GeofencingClient
 
 
-    @SuppressLint("MissingInflatedId", "MissingPermission")
+    @SuppressLint("MissingInflatedId", "MissingPermission", "ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_save_ubicacion_real)
@@ -128,9 +139,9 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
 
         val btnIndice = findViewById<Button>(R.id.btn_indice_delictivo)
         val vinetaDelictivo = findViewById<androidx.cardview.widget.CardView>(R.id.vineta_delictivo)
-        val progressBar = findViewById<ProgressBar>(R.id.termometro_delictivo)
+        val speedView = findViewById<SpeedView>(R.id.termometro_delictivo)
         val btnMasInformacion = findViewById<Button>(R.id.btn_mas_informacion)
-
+        val mainLayout = findViewById<ConstraintLayout>(R.id.constraintLayout)
         val ConfiButton = findViewById<Button>(R.id.AjustesButton)
         val switchUbicacionReal = findViewById<SwitchMaterial>(R.id.UbicacionReal) as SwitchMaterial
         val sharedPrefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -138,7 +149,7 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         switchUbicacionReal.isChecked = sharedPrefs.getBoolean(SWITCH_STATE, false)
 
         btnIndice.setOnClickListener {
-            // Mostrar la viñeta
+            // Ocultar la viñeta inicialmente
             vinetaDelictivo.visibility = View.GONE
 
             fusedLocationClient.lastLocation.addOnSuccessListener { location ->
@@ -146,30 +157,84 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
                     val latitud = location.latitude
                     val longitud = location.longitude
                     Log.d(TAG, "Latitud: $latitud, Longitud: $longitud")
+
                     // Consultar Firebase y calcular el índice delictivo
                     lifecycleScope.launch(Dispatchers.IO) {
-                        val indiceDelictivo = calcularIndiceDelictivo(latitud, longitud)
+                        val (indiceDelictivo, _) = calcularIndiceDelictivo(latitud, longitud)
                         withContext(Dispatchers.Main) {
+                            vinetaDelictivo.visibility = View.VISIBLE
+                            vinetaDelictivo.bringToFront()
+
+                            // Convertir a Float y actualizar el valor del galvanómetro con animación
+                            val indiceFloat = indiceDelictivo.toFloat()
+                            speedView.speedTo(indiceFloat, 200)
+
                             if (indiceDelictivo > 0) {
-                                // Mostrar la viñeta con el índice delictivo
-                                vinetaDelictivo.visibility = View.VISIBLE
-                                progressBar.max = 100
-                                progressBar.progress = indiceDelictivo
+                                Log.d(TAG, "Índice delictivo calculado: $indiceDelictivo")
                             } else {
                                 Log.w(TAG, "No se encontraron delitos cercanos para mostrar el índice.")
                             }
                         }
                     }
+                } else {
+                    Log.w(TAG, "No se pudo obtener la ubicación del usuario.")
                 }
             }
         }
+        // Detectar toque fuera del CardView
+        mainLayout.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_DOWN) {
+                // Si el CardView está visible y el usuario toca fuera del CardView, se oculta
+                if (vinetaDelictivo.visibility == View.VISIBLE) {
+                    val cardViewLocation = IntArray(2)
+                    vinetaDelictivo.getLocationOnScreen(cardViewLocation)
+                    val x = event.rawX
+                    val y = event.rawY
 
-        btnMasInformacion.setOnClickListener {
-            // Navegar a otra Activity con más detalles
-            val intent = Intent(this, DetallesDelitosActivity::class.java)
-            startActivity(intent)
+                    val left = cardViewLocation[0]
+                    val top = cardViewLocation[1]
+                    val right = left + vinetaDelictivo.width
+                    val bottom = top + vinetaDelictivo.height
+
+                    if (x < left || x > right || y < top || y > bottom) {
+                        vinetaDelictivo.visibility = View.GONE
+                        btnIndice.visibility = View.VISIBLE  // Restaurar visibilidad del botón
+                    }
+                }
+            }
+            false
         }
 
+        btnMasInformacion.setOnClickListener {
+            // Verificar si la viñeta es visible antes de continuar
+            if (vinetaDelictivo.visibility == View.VISIBLE) {
+                fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                    if (location != null) {
+                        val latitud = location.latitude
+                        val longitud = location.longitude
+
+                        // Consultar los delitos cercanos y el índice delictivo
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            val (_, delitosCercanos) = calcularIndiceDelictivo(latitud, longitud)
+                            Log.d(TAG, "Delitos cercanos: $delitosCercanos")
+                            withContext(Dispatchers.Main) {
+                                if (delitosCercanos.isNotEmpty()) {
+                                    val intent = Intent(this@SaveUbicacionReal, DetallesDelitosActivity::class.java).apply {  }
+                                    intent.putExtra("delitosCercanos", ArrayList(delitosCercanos))
+                                    startActivity(intent)
+                                } else {
+                                    Log.w(TAG, "No hay delitos cercanos para mostrar.")
+                                }
+                            }
+                        }
+                    } else {
+                        Log.w(TAG, "No se pudo obtener la ubicación del usuario.")
+                    }
+                }
+            } else {
+                Log.w(TAG, "La viñeta no es visible. El botón 'Más Información' no tiene acción.")
+            }
+        }
 
         ConfiButton.setOnClickListener {view ->
             showGeofenceDialog()
@@ -181,7 +246,6 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
             finish()
             Log.d(TAG, "Boton Ajustes pulsado")
         }
-
         switchUbicacionReal.setOnCheckedChangeListener {  _, isChecked ->
             if (isChecked) {
                 Log.d(TAG, "Switch activo")
@@ -208,9 +272,14 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
             }
         }
     }
-    private suspend fun calcularIndiceDelictivo(latitudUsuario: Double, longitudUsuario: Double, radioKm: Double = 2.0): Int {
+    private suspend fun calcularIndiceDelictivo(
+        latitudUsuario: Double,
+        longitudUsuario: Double,
+        radioKm: Double = 0.5
+    ): Pair<Int, List<Delito>> {
         return withContext(Dispatchers.IO) {
-            val delitosCercanos = mutableListOf<Map<String, Any>>()
+            var totalDelitos = 0.0
+            val delitosCercanos = mutableListOf<Delito>()
 
             // Definir el rango de latitud y longitud basado en el radio en km
             val latitudMin = latitudUsuario - kmToLatitudeDegrees(radioKm)
@@ -226,14 +295,21 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
                     val latitudDelito = delitoSnapshot.child("latitud").getValue(Double::class.java)
                     val longitudDelito = delitoSnapshot.child("longitud").getValue(Double::class.java)
                     val categoriaDelito = delitoSnapshot.child("categoria_delito").getValue(String::class.java)
-                    Log.d(TAG, "Latitud: $latitudDelito, Longitud: $longitudDelito, Categoria: $categoriaDelito")
+                    val delito = delitoSnapshot.child("delito").getValue(String::class.java)
 
-                    if (latitudDelito != null && longitudDelito != null && categoriaDelito != null && categoriaDelito != "Hecho no delictivo") {
+                    if (latitudDelito != null && longitudDelito != null && categoriaDelito != null && delito != null && categoriaDelito != "Hecho no delictivo") {
                         // Verificar si la longitud está dentro del rango
                         if (latitudDelito in latitudMin..latitudMax && longitudDelito in longitudMin..longitudMax) {
                             val distancia = calcularDistancia(latitudUsuario, longitudUsuario, latitudDelito, longitudDelito)
                             if (distancia <= radioKm) {
-                                delitosCercanos.add(delitoSnapshot.value as Map<String, Any>)
+                                // Contar los delitos según su categoría
+                                if (categoriaDelito == "DELITO DE BAJO IMPACTO") {
+                                    totalDelitos += 0.1
+                                } else {
+                                    totalDelitos += 1.0
+                                }
+                                // Agregar a la lista de delitos cercanos
+                                delitosCercanos.add(Delito(latitudDelito, longitudDelito, categoriaDelito, delito))
                             }
                         }
                     } else {
@@ -242,13 +318,25 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
                 }
             } else {
                 Log.w(TAG, "No se encontraron datos dentro del rango especificado.")
+                totalDelitos = 0.0
             }
-            Log.d(TAG, "Delitos cercanos encontrados: $delitosCercanos")
-            // Aquí calculamos el índice delictivo proporcionalmente
-            return@withContext (delitosCercanos.size * 10).coerceAtMost(100) // Escalar de 0 a 100
+
+            // Definir la población en riesgo para el área (valor simulado para este ejemplo)
+            val poblacionEnRiesgo = 100000  // Esto puede cambiar dependiendo de la alcaldía o datos reales
+
+            // Cálculo de la tasa de criminalidad
+            val tasaCriminalidad = if (poblacionEnRiesgo > 0) {
+                ((totalDelitos / poblacionEnRiesgo) * 100000).toInt()
+            } else {
+                0
+            }
+
+            Log.d(TAG, "Número de delitos: $totalDelitos, Población en riesgo: $poblacionEnRiesgo, Tasa de criminalidad: $tasaCriminalidad")
+
+            // Devolver la tasa de criminalidad como el índice delictivo y la lista de delitos cercanos
+            return@withContext Pair(tasaCriminalidad.coerceAtMost(100), delitosCercanos)
         }
     }
-
 
     private fun kmToLatitudeDegrees(km: Double): Double {
         val earthRadius = 6371.0
@@ -439,6 +527,7 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         val radioField = EditText(context).apply {
             hint = "Radio geovalla $index"
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+            tag = "radiusField_$index"
         }
         // Botón para seleccionar ubicación en el mapa
         val btnSelectLocation = Button(context).apply {
@@ -464,7 +553,7 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
             val longitude = data?.getDoubleExtra("longitude", 0.0)
             val radius = data?.getFloatExtra("radius", 100f) ?: 100f
             val geofenceIndex = data?.getIntExtra("geofenceIndex", -1) ?: -1
-            Log.d(TAG, "Latitud: $latitude, Longitud: $longitude, GeofenceIndex: $geofenceIndex")
+            Log.d(TAG, "Latitud: $latitude, Longitud: $longitude, GeofenceIndex: $geofenceIndex, Radius: $radius")
 
             if (latitude != null && longitude != null && geofenceIndex != -1) {
                 geofenceContainer.post {
