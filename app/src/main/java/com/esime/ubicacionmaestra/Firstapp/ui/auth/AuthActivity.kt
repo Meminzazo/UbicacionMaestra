@@ -48,6 +48,7 @@ class AuthActivity : AppCompatActivity() {
         val longitud: String? = "-",
     )
 
+    //** valores defalt
     // Clase para manejar los datos de la geovalla
     data class GeofenceD(
         val name: String = "ESIME",

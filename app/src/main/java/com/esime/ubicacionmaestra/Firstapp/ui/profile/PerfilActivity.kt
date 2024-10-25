@@ -22,7 +22,10 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.home.HomeActivity
 import com.esime.ubicacionmaestra.R
+import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.database
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.storage.FirebaseStorage
@@ -42,6 +45,7 @@ class PerfilActivity : AppCompatActivity() {
     private lateinit var imageView: ImageView
     private lateinit var bitmap: Bitmap // Declaración global del bitmap
     private var resultUri: Uri? = null
+    private lateinit var database: DatabaseReference
 
     private val PICK_IMAGE_REQUEST = 1
     private lateinit var fileUri: Uri
@@ -89,7 +93,7 @@ class PerfilActivity : AppCompatActivity() {
         setContentView(R.layout.activity_perfil)
 
         supportActionBar?.hide()    // Oculta la barra de título
-
+        database = Firebase.database.reference
         // Inicializar los elementos de la interfaz con los IDs correspondientes
         saveButton = findViewById(R.id.GuardarDatosButton)
         nombresEditText = findViewById(R.id.Nombres)
@@ -494,6 +498,9 @@ class PerfilActivity : AppCompatActivity() {
                 "Telefono" to telefono,
                 "chat_id" to chat_id
             )
+
+
+
 
             // Conexion con la base de datos para guardar los datos del usuario
             db.collection("users").document(email)
