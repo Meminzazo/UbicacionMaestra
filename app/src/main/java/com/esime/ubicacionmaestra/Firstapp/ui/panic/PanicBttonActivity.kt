@@ -133,6 +133,7 @@ class panicBttonActivity : AppCompatActivity() {
                 val currentTime = Calendar.getInstance().time
                 val time = timeFormat.format(currentTime)
                 val date = dateFormat.format(currentTime)
+                //a
 
                 // Actualizar los TextViews
                 timeTextView.text = time
