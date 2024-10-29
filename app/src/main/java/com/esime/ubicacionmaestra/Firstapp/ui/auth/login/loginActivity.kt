@@ -6,6 +6,8 @@ import android.os.Bundle
 import android.text.method.HideReturnsTransformationMethod
 import android.text.method.PasswordTransformationMethod
 import android.util.Log
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
@@ -18,6 +20,7 @@ import com.esime.ubicacionmaestra.Firstapp.ui.home.HomeActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.home.ProviderType
 import com.esime.ubicacionmaestra.Firstapp.ui.welcome.welcomeActivity
 import com.esime.ubicacionmaestra.R
+import com.google.android.material.internal.ViewUtils.hideKeyboard
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
@@ -54,6 +57,25 @@ class loginActivity : AppCompatActivity() {
 
         var isPasswordVisible = false
 
+        emailEditText.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                hideKeyboard()
+                emailEditText.clearFocus()
+                true
+            } else {
+                false
+            }
+        }
+        passEditText.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                hideKeyboard()
+                emailEditText.clearFocus()
+                true
+            } else {
+                false
+            }
+        }
+
         auth = FirebaseAuth.getInstance()   //creamos una autenticacion
         passEditText.transformationMethod = PasswordTransformationMethod.getInstance()
         // Configurar la acción para mostrar/ocultar la contraseña
@@ -84,6 +106,13 @@ class loginActivity : AppCompatActivity() {
                     }
                 }
             }
+        }
+    }
+    private fun hideKeyboard() {
+        val view = this.currentFocus
+        if (view != null) {
+            val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.hideSoftInputFromWindow(view.windowToken, 0)
         }
     }
 

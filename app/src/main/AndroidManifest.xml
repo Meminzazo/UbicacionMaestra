@@ -22,6 +22,9 @@
         android:theme="@style/Theme.UbicacionMaestra"
         tools:targetApi="31">
         <activity
+            android:name=".Firstapp.ui.auth.lostPassword.ResetPasswordActivity"
+            android:exported="true" />
+        <activity
             android:name=".Firstapp.ui.utilities.activitiesUseful.DetallesDelitosActivity"
             android:exported="false" />
         <activity
@@ -89,7 +92,7 @@
             android:exported="false" />
         <activity
             android:name=".Firstapp.ui.auth.AuthActivity"
-            android:exported="true"></activity>
+            android:exported="true" />
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"
             android:screenOrientation="portrait"

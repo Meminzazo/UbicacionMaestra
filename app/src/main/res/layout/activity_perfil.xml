@@ -165,7 +165,10 @@
         android:hint="Nombres"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/imgPerfil" />
+        app:layout_constraintTop_toBottomOf="@id/imgPerfil"
+        android:inputType="text"
+        android:imeOptions="actionDone" />
+
 
     <EditText
         android:id="@+id/Apellidos"
@@ -175,7 +178,10 @@
         android:hint="Apellidos"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/Nombres" />
+        app:layout_constraintTop_toBottomOf="@id/Nombres"
+        android:inputType="text"
+        android:imeOptions="actionDone" />
+
 
     <EditText
         android:id="@+id/NumTelefono"
@@ -185,7 +191,10 @@
         android:hint="Telefono (Opcional)"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/Apellidos" />
+        app:layout_constraintTop_toBottomOf="@id/Apellidos"
+        android:inputType="phone"
+        android:imeOptions="actionDone" />
+
 
     <Button
         android:id="@+id/GuardarDatosButton"

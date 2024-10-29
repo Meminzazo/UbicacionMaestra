@@ -13,6 +13,9 @@ import android.net.Uri
 import android.os.Bundle
 import android.text.method.PasswordTransformationMethod
 import android.util.Log
+import android.view.View
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
@@ -22,6 +25,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.home.HomeActivity
 import com.esime.ubicacionmaestra.R
+import com.google.android.material.internal.ViewUtils.hideKeyboard
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DatabaseReference
@@ -335,10 +339,40 @@ class PerfilActivity : AppCompatActivity() {
             intent.action = Intent.ACTION_GET_CONTENT
             startActivityForResult(Intent.createChooser(intent, "Selecciona una imagen"), PICK_IMAGE_REQUEST)
         }
+        nombresEditText.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_NEXT) {
+                nombresEditText.clearFocus()
+                nombresEditText.hideKeyboard()  // Oculta el teclado desde la vista actual
+                true
+            } else {
+                false
+            }
+        }
 
+        apellidosEditText.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_NEXT) {
+                apellidosEditText.clearFocus()
+                apellidosEditText.hideKeyboard()
+                true
+            } else {
+                false
+            }
+        }
 
+        telefonoEditText.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_NEXT) {
+                telefonoEditText.clearFocus()
+                telefonoEditText.hideKeyboard()
+                true
+            } else {
+                false
+            }
+        }
     }
-
+    fun View.hideKeyboard() {
+        val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(windowToken, 0)
+    }
     @SuppressLint("MissingSuperCall")
     override fun onBackPressed() {
         val intent = Intent(this, HomeActivity::class.java)

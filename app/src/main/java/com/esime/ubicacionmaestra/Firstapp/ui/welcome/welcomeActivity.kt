@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.esime.ubicacionmaestra.Firstapp.ui.auth.login.loginActivity
+import com.esime.ubicacionmaestra.Firstapp.ui.auth.lostPassword.ResetPasswordActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.auth.register.registerActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.home.HomeActivity
 import com.esime.ubicacionmaestra.R
@@ -55,7 +56,7 @@ class welcomeActivity : AppCompatActivity() {
             finish()
         }
         lostPassButton.setOnClickListener {
-            val intent = Intent(this, loginActivity::class.java)
+            val intent = Intent(this, ResetPasswordActivity::class.java)
             startActivity(intent)
             finish()
         }

@@ -38,6 +38,8 @@
         android:paddingHorizontal="15dp"
         android:paddingVertical="10dp"
         app:layout_constraintEnd_toEndOf="parent"
+        android:inputType="textEmailAddress"
+        android:imeOptions="actionDone"
         />
 
     <androidx.appcompat.widget.AppCompatEditText
@@ -53,6 +55,8 @@
         android:paddingHorizontal="15dp"
         android:paddingVertical="10dp"
         app:layout_constraintEnd_toEndOf="parent"
+        android:inputType="textPassword"
+        android:imeOptions="actionDone"
         />
 
     <androidx.appcompat.widget.AppCompatButton

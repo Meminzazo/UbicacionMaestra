@@ -6,6 +6,8 @@ import android.os.Bundle
 import android.text.method.HideReturnsTransformationMethod
 import android.text.method.PasswordTransformationMethod
 import android.util.Log
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
@@ -18,6 +20,7 @@ import com.esime.ubicacionmaestra.Firstapp.ui.home.HomeActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.home.ProviderType
 import com.esime.ubicacionmaestra.Firstapp.ui.welcome.welcomeActivity
 import com.esime.ubicacionmaestra.R
+import com.google.android.material.internal.ViewUtils.hideKeyboard
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
@@ -65,6 +68,7 @@ class registerActivity : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
+
         supportActionBar?.hide()    // oculta la barra de titulo
         setup() // llama a la funcion setup que inicia la magia
     }
@@ -116,6 +120,36 @@ class registerActivity : AppCompatActivity() {
             // Mover el cursor al final del texto
             passEditText2.setSelection(passEditText2.text?.length ?: 0)
             isPasswordVisible2 = !isPasswordVisible2
+        }
+        emailEditText.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_NEXT) {
+                // Cierra el teclado
+                emailEditText.clearFocus()
+                hideKeyboard()
+                true
+            } else {
+                false
+            }
+        }
+        passEditText.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_NEXT) {
+                // Cierra el teclado
+                emailEditText.clearFocus()
+                hideKeyboard()
+                true
+            } else {
+                false
+            }
+        }
+        passEditText2.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_NEXT) {
+                // Cierra el teclado
+                emailEditText.clearFocus()
+                hideKeyboard()
+                true
+            } else {
+                false
+            }
         }
 
         ///////// implementacion de la autenticacion
@@ -191,7 +225,13 @@ class registerActivity : AppCompatActivity() {
         startActivity(homeIntent)
         finish()
     }
-
+    private fun hideKeyboard() {
+        val view = this.currentFocus
+        if (view != null) {
+            val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.hideSoftInputFromWindow(view.windowToken, 0)
+        }
+    }
     fun crearcolletion(email: String, UID: String){
         db.collection("users").document(UID)
             .set(user)
