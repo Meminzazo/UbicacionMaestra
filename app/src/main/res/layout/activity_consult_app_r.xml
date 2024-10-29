@@ -65,7 +65,7 @@
         android:layout_height="wrap_content"
         android:layout_marginLeft="105dp"
         android:layout_marginBottom="10dp"
-        android:text=""
+        android:text="User"
         android:textColor="@color/white"
         android:textSize="20sp"
         android:textStyle="italic"
@@ -74,8 +74,9 @@
 
     <ImageView
         android:id="@+id/photoPerfil"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:src="@drawable/user_null"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@+id/textView4"

@@ -15,8 +15,8 @@
         android:text="Foto de perfil"
         android:textSize="21dp"
         android:textStyle="bold"
-        android:layout_marginStart="-15dp"
-        android:layout_marginTop="5dp"
+
+        app:layout_constraintBottom_toTopOf="@+id/boton_iniciar_conversacion"
         app:layout_constraintEnd_toStartOf="@+id/btnSeleccionarFoto"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/NumTelefono" />
@@ -41,9 +41,9 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Seleccionar Foto"
-        app:layout_constraintBottom_toTopOf="@+id/GuardarDatosButton"
+        app:layout_constraintBottom_toTopOf="@+id/textView6"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textView5" />
+        />
 
 
     <Button
@@ -51,21 +51,20 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Suscribirse al bot"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textView5"
-        app:layout_constraintBottom_toTopOf="@+id/GuardarDatosButton"
-        />
+        app:layout_constraintBottom_toTopOf="@+id/textView6"
+        app:layout_constraintEnd_toStartOf="@+id/btnSeleccionarFoto"
+        app:layout_constraintStart_toStartOf="parent" />
 
     <TextView
         android:id="@+id/textView6"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Se recomienda registrar al bot para una funcionalidad completa"
-        android:textSize="15sp"
         android:textAlignment="center"
         android:textColor="@color/black"
+        android:textSize="15sp"
         android:textStyle="bold"
-        app:layout_constraintTop_toBottomOf="@id/boton_iniciar_conversacion"
+        app:layout_constraintBottom_toTopOf="@+id/GuardarDatosButton"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
 
@@ -74,17 +73,15 @@
 
     <ImageView
         android:id="@+id/imageViewFoto"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginLeft="25dp"
+        android:layout_width="70dp"
+        android:layout_height="70dp"
         android:scaleType="centerCrop"
-        app:layout_constraintBottom_toBottomOf="@id/btnSeleccionarFoto"
-        app:layout_constraintBottom_toTopOf="@id/btnSeleccionarFoto"
-        app:layout_constraintRight_toLeftOf="@id/btnSeleccionarFoto"
+        android:src="@drawable/user_null"
+        android:layout_marginLeft="90dp"
+        app:layout_constraintBottom_toTopOf="@+id/btnSeleccionarFoto"
         app:layout_constraintRight_toRightOf="parent"
-        android:layout_marginBottom="8dp"
-        android:layout_marginRight="-100dp"
-        />
+        app:layout_constraintStart_toEndOf="@+id/textView5"
+        app:layout_constraintTop_toBottomOf="@+id/NumTelefono" />
 
 
     <TextView
@@ -201,10 +198,9 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:text="Actualizar datos"
-        android:layout_marginBottom="65dp"
+        android:layout_marginBottom="100dp"
         app:layout_constraintBottom_toTopOf="@+id/textGrupo"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent" />
 
 
