@@ -106,7 +106,6 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
 
             val docRefGroup = db.collection("grupos").document(grupoID!!)
 
-
             switchConsult.setOnCheckedChangeListener { _, isChecked ->
                 if (isChecked) {
 
@@ -115,27 +114,31 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
                     // Obtén los UIDs de los miembros del grupo
                     docRefGroup.get().addOnSuccessListener { document2 ->
                         for (i in 0 until 7) {
+                            val email = document2.getString("email${i + 1}")
+                            if (!email.isNullOrEmpty()) {
+                                Log.d(TAG, "UID del miembro $i: $email")
+                                uidList[i] = email
 
-                            Log.d(TAG, "UID del miembro $i: ${document2.getString("email${i + 1}")}")
+                                // Verifica si el UID no es nulo ni vacío antes de agregar el listener
+                                uidList[i]?.let { uid ->
+                                    val docRefImage = db.collection("users").document(uid)
+                                    docRefImage.get().addOnSuccessListener { document3 ->
 
-                            uidList[i] = document2.getString("email${i + 1}")
+                                        if (uid.isNotEmpty()) {
+                                            addLocationListener(i, uid)
 
-                            // Verifica si el UID no es nulo ni vacío antes de agregar el listener
-                            uidList[i]?.let { uid ->
-                                val docRefImage = db.collection("users").document(uid)
-                                docRefImage.get().addOnSuccessListener { document3 ->
-
-                                    if (uid.isNotEmpty()) {
-                                        addLocationListener(i, uid)
-
-                                        urllist[i] = document3.getString("photoUrl")
-                                        
-                                        cargarFoto(urllist[i]!!, Imageviewlist[i])
-
-                                    } else {
-                                        Log.w(TAG, "UID vacío en la posición $i")
+                                            val photoUrl = document3.getString("photoUrl")
+                                            if (!photoUrl.isNullOrEmpty()) {
+                                                urllist[i] = photoUrl
+                                                cargarFoto(urllist[i]!!, Imageviewlist[i])
+                                            }
+                                        } else {
+                                            Log.w(TAG, "UID vacío en la posición $i")
+                                        }
                                     }
                                 }
+                            } else {
+                                Log.w(TAG, "Email nulo o vacío en la posición $i, no se agregará el usuario.")
                             }
                         }
                     }
@@ -145,7 +148,8 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
                 }
             }
         }
-// Bucle para configurar los ImageView
+
+        // Bucle para configurar los ImageView
         for (i in Imageviewlist.indices) {
             Imageviewlist[i].setOnClickListener {
                 val uid = uidList[i] // Obtén el UID correspondiente para este ImageView
@@ -183,8 +187,8 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
                 }
             }
         }
-
     }
+
     private fun convertirTimestamp(timestamp: Long): String {
         return try {
             // Crea una instancia de Date usando el timestamp en milisegundos
