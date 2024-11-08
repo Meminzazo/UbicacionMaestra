@@ -73,20 +73,8 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
                 Log.i(TAG, "Entrando en la geovalla: $name")
                 Toast.makeText(context, "Entrando en la geovalla: $name", Toast.LENGTH_SHORT).show()
 
-                // Obtener el chat_id desde Firestore antes de enviar el mensaje
-                firestore.collection("users").document(uid!!).get()
-                    .addOnSuccessListener { document ->
-                        val chatId = document.get("chat_id")?.toString()
-                        if (chatId != null) {
-                            val message = "El usuario con UID $uid ha entrado en la geovalla '$name' a las $timestamp. Ubicación: ($latitude, $longitude)."
-                            sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, message)
-                        } else {
-                            Log.e(TAG, "No se encontró el chat_id para el usuario $uid")
-                        }
-                    }
-                    .addOnFailureListener { e ->
-                        Log.e(TAG, "Error al obtener el chat_id: ${e.message}")
-                    }
+                // Obtener el grupo del usuario y enviar alertas a todos los usuarios en ese grupo
+                sendGroupAlert(uid!!, "ha entrado en la geovalla '$name' a las $timestamp. Ubicación: ($latitude, $longitude).")
 
             } else if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_EXIT) {
                 val update = mapOf("transitionTypes" to "false")
@@ -94,27 +82,54 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
                 Log.i(TAG, "Saliendo de la geovalla: $name")
                 Toast.makeText(context, "Saliendo de la geovalla: $name", Toast.LENGTH_SHORT).show()
 
-                // Obtener el chat_id desde Firestore antes de enviar el mensaje
-                firestore.collection("users").document(uid!!).get()
-                    .addOnSuccessListener { document ->
-                        val chatId = document.get("chat_id")?.toString()
-                        if (chatId != null) {
-                            val message = "El usuario con UID $uid ha salido de la geovalla '$name' a las $timestamp. Ubicación: ($latitude, $longitude)."
-                            sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, message)
-                        } else {
-                            Log.e(TAG, "No se encontró el chat_id para el usuario $uid")
-                        }
-                    }
-                    .addOnFailureListener { e ->
-                        Log.e(TAG, "Error al obtener el chat_id: ${e.message}")
-                    }
-
+                // Obtener el grupo del usuario y enviar alertas a todos los usuarios en ese grupo
+                sendGroupAlert(uid!!, "ha salido de la geovalla '$name' a las $timestamp. Ubicación: ($latitude, $longitude).")
             } else {
                 Log.e(TAG, "Transición no válida")
             }
         } else {
             Log.e(TAG, "Nombre de geovalla no encontrado en el Intent")
         }
+    }
+
+    private fun sendGroupAlert(uid: String, messageSuffix: String) {
+        firestore.collection("users").document(uid).get()
+            .addOnSuccessListener { userDocument ->
+                val groupId = userDocument.getString("GrupoID")
+                if (groupId != null) {
+                    firestore.collection("grupos").document(groupId).get()
+                        .addOnSuccessListener { groupDocument ->
+                            for (i in 1..7) {
+                                val userId = groupDocument.getString("email$i")
+                                if (userId != null) {
+                                    firestore.collection("users").document(userId).get()
+                                        .addOnSuccessListener { document ->
+                                            val chatId = document.get("chat_id")?.toString()
+                                            if (chatId != null) {
+                                                val userName = userDocument.getString("Nombres") ?: "Usuario"
+                                                val googleMapsLink = "https://www.google.com/maps/search/?api=1&query=\$latitude,\$longitude"
+                                                val message = "El usuario $userName $messageSuffix Puedes ver la ubicación aquí: $googleMapsLink"
+                                                sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, message)
+                                            } else {
+                                                Log.e(TAG, "No se encontró el chat_id para el usuario $userId")
+                                            }
+                                        }
+                                        .addOnFailureListener { e ->
+                                            Log.e(TAG, "Error al obtener el chat_id: ${e.message}")
+                                        }
+                                }
+                            }
+                        }
+                        .addOnFailureListener { e ->
+                            Log.e(TAG, "Error al obtener el grupo: ${e.message}")
+                        }
+                } else {
+                    Log.e(TAG, "No se encontró el grupoId para el usuario $uid")
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "Error al obtener el usuario: ${e.message}")
+            }
     }
 
     private fun sendTelegramMessage(botToken: String, chatId: String, message: String) {

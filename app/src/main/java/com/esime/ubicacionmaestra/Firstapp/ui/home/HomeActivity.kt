@@ -12,7 +12,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.esime.ubicacionmaestra.Firstapp.ui.profile.PerfilActivity
-import com.esime.ubicacionmaestra.Firstapp.ui.auth.AuthActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.utilities.broadcasts.BatteryDarkModeReceiver
 import com.esime.ubicacionmaestra.Firstapp.ui.utilities.broadcasts.BatteryMapReceiver
 import com.esime.ubicacionmaestra.Firstapp.ui.welcome.welcomeActivity

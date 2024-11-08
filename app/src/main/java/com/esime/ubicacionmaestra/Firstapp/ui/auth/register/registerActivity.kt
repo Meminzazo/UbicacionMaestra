@@ -171,7 +171,7 @@ class registerActivity : AppCompatActivity() {
 
                             Log.d(TAG, "UID: $UID")
 
-                            database.child("users").child(UID!!).setValue(com.esime.ubicacionmaestra.Firstapp.ui.auth.AuthActivity.UserUbi())
+                            database.child("users").child(UID!!).setValue(UserUbi())
 
                             crearcolletion(email, UID)  // solo crea a base de datos si los edit text no estan vacios
 
