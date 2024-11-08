@@ -64,7 +64,7 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
         val location = geofencingEvent.triggeringLocation
         val latitude = location?.latitude
         val longitude = location?.longitude
-        val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+        val timestamp = SimpleDateFormat("EEEE, dd MMMM yyyy hh:mm:ss a", Locale.getDefault()).format(Date())
 
         if (name != null) {
             if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER) {
@@ -74,7 +74,7 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
                 Toast.makeText(context, "Entrando en la geovalla: $name", Toast.LENGTH_SHORT).show()
 
                 // Obtener el grupo del usuario y enviar alertas a todos los usuarios en ese grupo
-                sendGroupAlert(uid!!, "ha entrado en la geovalla '$name' a las $timestamp. Ubicación: ($latitude, $longitude).")
+                sendGroupAlert(uid!!, "ha entrado en la geovalla '$name' el $timestamp.",latitude!!, longitude!!)
 
             } else if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_EXIT) {
                 val update = mapOf("transitionTypes" to "false")
@@ -83,7 +83,7 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
                 Toast.makeText(context, "Saliendo de la geovalla: $name", Toast.LENGTH_SHORT).show()
 
                 // Obtener el grupo del usuario y enviar alertas a todos los usuarios en ese grupo
-                sendGroupAlert(uid!!, "ha salido de la geovalla '$name' a las $timestamp. Ubicación: ($latitude, $longitude).")
+                sendGroupAlert(uid!!, "ha salido de la geovalla '$name' el $timestamp.",latitude!!, longitude!!)
             } else {
                 Log.e(TAG, "Transición no válida")
             }
@@ -92,7 +92,7 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
         }
     }
 
-    private fun sendGroupAlert(uid: String, messageSuffix: String) {
+    private fun sendGroupAlert(uid: String, messageSuffix: String,latitude: Double, longitude: Double) {
         firestore.collection("users").document(uid).get()
             .addOnSuccessListener { userDocument ->
                 val groupId = userDocument.getString("GrupoID")
@@ -107,7 +107,7 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
                                             val chatId = document.get("chat_id")?.toString()
                                             if (chatId != null) {
                                                 val userName = userDocument.getString("Nombres") ?: "Usuario"
-                                                val googleMapsLink = "https://www.google.com/maps/search/?api=1&query=\$latitude,\$longitude"
+                                                val googleMapsLink = "https://www.google.com/maps/search/?api=1&query=$latitude,$longitude"
                                                 val message = "El usuario $userName $messageSuffix Puedes ver la ubicación aquí: $googleMapsLink"
                                                 sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, message)
                                             } else {

@@ -65,20 +65,44 @@ class panicBttonActivity : AppCompatActivity() {
             // Mostrar mensaje de pánico activado
             Toast.makeText(this, "Pánico activado!", Toast.LENGTH_SHORT).show()
 
-            // Obtener el chat_id desde Firestore antes de enviar el mensaje
+            // Obtener el grupo del usuario y enviar alertas a todos los usuarios en ese grupo
             if (uid != null) {
                 firestore.collection("users").document(uid!!).get()
-                    .addOnSuccessListener { document ->
-                        val chatId = document.get("chat_id")?.toString()
-                        if (chatId != null) {
-                            val message = "El usuario con UID $uid necesita ayuda."
-                            sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, message)
+                    .addOnSuccessListener { userDocument ->
+                        val groupId = userDocument.getString("GrupoID")
+                        if (groupId != null) {
+                            firestore.collection("grupos").document(groupId).get()
+                                .addOnSuccessListener { groupDocument ->
+                                    for (i in 1..7) {
+                                        val userId = groupDocument.getString("email$i")
+                                        if (userId != null) {
+                                            firestore.collection("users").document(userId).get()
+                                                .addOnSuccessListener { document ->
+                                                    val chatId = document.get("chat_id")?.toString()
+                                                    if (chatId != null) {
+                                                        val userName = userDocument.getString("Nombres") ?: "Usuario desconocido"
+                                                        val location = "Ubicación: (latitud: ${userDocument.getDouble("latitude")}, longitud: ${userDocument.getDouble("longitude")})"
+                                                        val message = "El usuario $userName necesita ayuda. $location"
+                                                        sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, message)
+                                                    } else {
+                                                        Log.e(TAG, "No se encontró el chat_id para el usuario $userId")
+                                                    }
+                                                }
+                                                .addOnFailureListener { e ->
+                                                    Log.e(TAG, "Error al obtener el chat_id: ${e.message}")
+                                                }
+                                        }
+                                    }
+                                }
+                                .addOnFailureListener { e ->
+                                    Log.e(TAG, "Error al obtener el grupo: ${e.message}")
+                                }
                         } else {
-                            Log.e(TAG, "No se encontró el chat_id para el usuario $uid")
+                            Log.e(TAG, "No se encontró el GrupoID para el usuario $uid")
                         }
                     }
                     .addOnFailureListener { e ->
-                        Log.e(TAG, "Error al obtener el chat_id: ${e.message}")
+                        Log.e(TAG, "Error al obtener el usuario: ${e.message}")
                     }
             } else {
                 Log.e(TAG, "UID es nulo, no se puede enviar el mensaje de alerta.")
@@ -116,7 +140,6 @@ class panicBttonActivity : AppCompatActivity() {
             }
         })
     }
-    //a
 
     private fun updateTimeAndDate() {
         // Formato para la hora en formato de 12 horas con AM/PM
@@ -134,7 +157,6 @@ class panicBttonActivity : AppCompatActivity() {
                 val currentTime = Calendar.getInstance().time
                 val time = timeFormat.format(currentTime)
                 val date = dateFormat.format(currentTime)
-                //a
 
                 // Actualizar los TextViews
                 timeTextView.text = time
