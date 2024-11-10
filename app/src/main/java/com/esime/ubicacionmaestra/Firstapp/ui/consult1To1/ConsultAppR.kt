@@ -129,7 +129,8 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
 
         var grupoID: String? = null
         val nameUidMap = mutableMapOf<String, String>()  // Para ligar nombres con UIDs
-        val nombresList = mutableListOf<String>()  // Lista para nombres que se mostrará en el Spinner
+        val nombresList =
+            mutableListOf<String>()  // Lista para nombres que se mostrará en el Spinner
 
         geofencingClient = LocationServices.getGeofencingClient(this)
         database = FirebaseDatabase.getInstance().reference
@@ -159,24 +160,27 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
 
                     // Iteramos por cada UID para obtener el nombre del usuario
                     uidList.forEach { uid ->
-                        db.collection("users").document(uid).get().addOnSuccessListener { userDocument ->
-                            val nombre = userDocument.getString("Nombres")  // Asegúrate de que el campo sea correcto
-                            if (!nombre.isNullOrEmpty()) {
-                                nombresList.add(nombre)  // Agrega el nombre a la lista
-                                nameUidMap[nombre] = uid  // Asocia el nombre con el UID en el map
+                        db.collection("users").document(uid).get()
+                            .addOnSuccessListener { userDocument ->
+                                val nombre =
+                                    userDocument.getString("Nombres")  // Asegúrate de que el campo sea correcto
+                                if (!nombre.isNullOrEmpty()) {
+                                    nombresList.add(nombre)  // Agrega el nombre a la lista
+                                    nameUidMap[nombre] =
+                                        uid  // Asocia el nombre con el UID en el map
 
-                                Log.i(TAG, "Nombre: $nombre, UID: $uid")
-                            }
+                                    Log.i(TAG, "Nombre: $nombre, UID: $uid")
+                                }
 
-                            // Cuando hayamos terminado de obtener todos los nombres, configuramos el Spinner
-                            if (nombresList.size == uidList.size) {  // Asegúrate de que tenemos todos los nombres
-                                val adapter = ArrayAdapter(
-                                    this, android.R.layout.simple_spinner_item, nombresList
-                                )
-                                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                                spinnerUbi.adapter = adapter
-                            }
-                        }.addOnFailureListener { e ->
+                                // Cuando hayamos terminado de obtener todos los nombres, configuramos el Spinner
+                                if (nombresList.size == uidList.size) {  // Asegúrate de que tenemos todos los nombres
+                                    val adapter = ArrayAdapter(
+                                        this, android.R.layout.simple_spinner_item, nombresList
+                                    )
+                                    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                                    spinnerUbi.adapter = adapter
+                                }
+                            }.addOnFailureListener { e ->
                             Log.w(TAG, "Error al obtener el usuario con UID: $uid", e)
                         }
                     }
@@ -193,36 +197,37 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
             switchConsultar.setOnCheckedChangeListener { _, isChecked ->
 
                 val selectedName = spinnerUbi.selectedItem.toString()
-                uidToConsult = nameUidMap[selectedName]  // Obtenemos el UID asociado al nombre
+                if (selectedName != null) {
+                    uidToConsult = nameUidMap[selectedName]  // Obtenemos el UID asociado al nombre
 
-                Log.i(TAG, "Nombre seleccionado: $selectedName con UID: $uidToConsult")
+                    Log.i(TAG, "Nombre seleccionado: $selectedName con UID: $uidToConsult")
 
-                val docRef4 = db.collection("users").document(uidToConsult!!)
+                    val docRef4 = db.collection("users").document(uidToConsult!!)
 
-                docRef4.get().addOnSuccessListener { document4 ->
-                    val PhotoUrl = document4.getString("photoUrl")
+                    docRef4.get().addOnSuccessListener { document4 ->
+                        val PhotoUrl = document4.getString("photoUrl")
 
-                    Log.i(TAG, "PhotoUrl: $PhotoUrl")
-                    if (PhotoUrl != null) {
-                        cargarFoto(PhotoUrl)
+                        Log.i(TAG, "PhotoUrl: $PhotoUrl")
+                        if (PhotoUrl != null) {
+                            cargarFoto(PhotoUrl)
+                        }
+                        if (selectedName != null) {
+                            nombresubi.text = selectedName
+                            //nombre = selectedName
+                        }
                     }
-                    if (selectedName != null) {
-                        nombresubi.text = selectedName
-                        //nombre = selectedName
-                    }
-                }
-                if (uidToConsult!!.isEmpty()) {
+                    if (uidToConsult!!.isEmpty()) {
 
-                    Toast.makeText(
-                        this,
-                        "Ingresa una dirección de correo válida",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    currentMarker?.remove()
-                    switchConsultar.isChecked = false
+                        Toast.makeText(
+                            this,
+                            "Ingresa una dirección de correo válida",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        currentMarker?.remove()
+                        switchConsultar.isChecked = false
 
 
-                } else {
+                    } else {
                         // Aquí se activa el listener cuando el switch está activado
                         if (isChecked) {
                             // Inicia la escucha de geovallas si no hay un listener activo
@@ -271,7 +276,10 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                             }
 
                             if (locationListener == null) {
-                                Log.i(TAG, "Si funciona el listener de ubicación con el ID: $uidToConsult")
+                                Log.i(
+                                    TAG,
+                                    "Si funciona el listener de ubicación con el ID: $uidToConsult"
+                                )
                                 val postReference1 = database.child("users").child(uidToConsult!!)
                                 locationListener = object : ValueEventListener {
                                     override fun onDataChange(dataSnapshot: DataSnapshot) {
@@ -294,9 +302,14 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                                             currentMarker?.remove()
 
                                             currentMarker = map.addMarker(
-                                                MarkerOptions().position(coordinates).title(selectedName)
-                                                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)).flat(true)
-                                                    )
+                                                MarkerOptions().position(coordinates)
+                                                    .title(selectedName)
+                                                    .icon(
+                                                        BitmapDescriptorFactory.defaultMarker(
+                                                            BitmapDescriptorFactory.HUE_AZURE
+                                                        )
+                                                    ).flat(true)
+                                            )
                                             map.animateCamera(
                                                 CameraUpdateFactory.newLatLngZoom(
                                                     coordinates,
@@ -340,12 +353,15 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                         }
 
 
+                    }
+                } else {
+                    Toast.makeText(this, "Seleccione un usuario", Toast.LENGTH_SHORT).show()
                 }
-
-
             }
+
         }
     }
+
     private fun convertirTimestamp(timestamp: Long): String {
         return try {
             // Crea una instancia de Date usando el timestamp en milisegundos
@@ -397,13 +413,23 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
         // Dibuja el círculo de fondo del marker
         paint.color = Color.WHITE
         paint.isAntiAlias = true
-        canvas.drawCircle((markerSize / 2).toFloat(), (markerSize / 2).toFloat(), (markerSize / 2).toFloat(), paint)
+        canvas.drawCircle(
+            (markerSize / 2).toFloat(),
+            (markerSize / 2).toFloat(),
+            (markerSize / 2).toFloat(),
+            paint
+        )
 
         // Recortar la imagen en forma circular
         val roundedBitmap = Bitmap.createBitmap(markerSize, markerSize, Bitmap.Config.ARGB_8888)
         val roundedCanvas = Canvas(roundedBitmap)
         val path = Path()
-        path.addCircle((markerSize / 2).toFloat(), (markerSize / 2).toFloat(), (markerSize / 2).toFloat(), Path.Direction.CCW)
+        path.addCircle(
+            (markerSize / 2).toFloat(),
+            (markerSize / 2).toFloat(),
+            (markerSize / 2).toFloat(),
+            Path.Direction.CCW
+        )
         roundedCanvas.clipPath(path)
 
         roundedCanvas.drawBitmap(
@@ -427,12 +453,18 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
 
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
-        enableLocation()
+        map.uiSettings.isZoomControlsEnabled = true
+        //enableLocation()
         //map.setOnMyLocationButtonClickListener(this)
         //map.setOnMyLocationClickListener(this)
         setupMap()
         val mexicoCity = LatLng(19.432608, -99.133209)
-        map.moveCamera(com.google.android.gms.maps.CameraUpdateFactory.newLatLngZoom(mexicoCity, 5f))
+        map.moveCamera(
+            com.google.android.gms.maps.CameraUpdateFactory.newLatLngZoom(
+                mexicoCity,
+                5f
+            )
+        )
         consultaGeofence()
     }
 

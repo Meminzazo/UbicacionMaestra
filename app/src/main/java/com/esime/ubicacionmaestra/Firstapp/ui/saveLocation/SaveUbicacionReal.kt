@@ -272,6 +272,26 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
             }
         }
     }
+    private fun removeAllGeofences() {
+        geofencingClient.removeGeofences(getGeofencePendingIntent())
+            .addOnSuccessListener {
+                Log.d(TAG, "Todas las geovallas eliminadas correctamente")
+                map.clear() // Limpia el mapa
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "Error al eliminar geovallas: ${e.message}", e)
+            }
+    }
+
+    private fun getGeofencePendingIntent(): PendingIntent {
+        val intent = Intent(this, GeofenceBroadcastReceiver::class.java)
+        return PendingIntent.getBroadcast(
+            this,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+        )
+    }
     private suspend fun calcularIndiceDelictivo(
         latitudUsuario: Double,
         longitudUsuario: Double,
@@ -337,19 +357,15 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
             return@withContext Pair(tasaCriminalidad.coerceAtMost(100), delitosCercanos)
         }
     }
-
     private fun kmToLatitudeDegrees(km: Double): Double {
         val earthRadius = 6371.0
         return (km / earthRadius) * (180 / Math.PI)
     }
-
     private fun kmToLongitudeDegrees(km: Double, latitude: Double): Double {
         val earthRadius = 6371.0
         val radiusAtLatitude = earthRadius * Math.cos(Math.toRadians(latitude))
         return (km / radiusAtLatitude) * (180 / Math.PI)
     }
-
-
     private fun calcularDistancia(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
         val radioTierra = 6371.0 // Radio de la Tierra en km
         val dLat = Math.toRadians(lat2 - lat1)
@@ -360,7 +376,6 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         val c = 2 * Math.atan2(sqrt(a), sqrt(1 - a))
         return radioTierra * c
     }
-
     override fun onDestroy() {
         super.onDestroy()
         unregisterReceiver(batteryMapReceiver) // Importante: liberar el receptor para evitar pérdidas de memoria
@@ -426,9 +441,9 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
                 }
     }
     private fun consultaGeofence() {
+        removeAllGeofences()
         val mDatabase = Firebase.database.reference
         Log.i(TAG, "Consulta de geovallas id: $uid")
-
         if (uid != null) {
             mDatabase.child("users").child(uid!!).child("Geovallas").get().addOnSuccessListener { snapshot ->
                 snapshot.children.forEach { geovalla ->
@@ -502,9 +517,12 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
             }
             guardarGeofencesEnBaseDeDatos(geofences)
             dialog.dismiss()
+            consultaGeofence()
         }
         dialog.show()
     }
+
+
     private fun addGeofenceFields(index: Int, container: LinearLayout) {
         val context = this
         // Texto para el nombre de la geovalla

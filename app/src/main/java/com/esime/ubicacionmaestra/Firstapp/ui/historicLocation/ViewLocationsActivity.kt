@@ -47,6 +47,7 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var map: GoogleMap
 
     private var uid: String? = null
+
     //private var emailPropio: String? = null
     private var emailCon: String? = null
 
@@ -129,8 +130,12 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
                                     spinnerHisUbi.adapter = adapter
                                 }
                             }.addOnFailureListener { e ->
-                            Log.w(ConsultAppR.TAG, "Error al obtener el usuario con UID: $uid", e)
-                        }
+                                Log.w(
+                                    ConsultAppR.TAG,
+                                    "Error al obtener el usuario con UID: $uid",
+                                    e
+                                )
+                            }
                     }
 
                 } else {
@@ -144,24 +149,30 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
             selectDateButton.setOnClickListener {   // Cuando se hace click en el boton de la seleccion de fecha
 
                 val selectedName = spinnerHisUbi.selectedItem.toString()
-                val emailUbiHist = nameUidMap[selectedName]  // Obtenemos el UID asociado al nombre
-
-                Log.i(TAG, "Email a consultar: $emailUbiHist")
-
-
-                if (emailUbiHist!!.isEmpty()) { // Si el EditText no esta vacio
-                    Toast.makeText(this, "Seleccione un email valido!", Toast.LENGTH_LONG).show()
-
+                if (selectedName.isBlank() || selectedName.isEmpty()) {
+                    Toast.makeText(this, "Seleccione un nombre", Toast.LENGTH_LONG).show()
                 } else {
-                    val docRef = db.collection("users").document(emailUbiHist!!)
-                    docRef.get().addOnSuccessListener { document1 ->
-                        val nuevaPhoto = document1.getString("photoUrl")
-                        if (nuevaPhoto != null) {
-                            cargarFotoEnMarker(nuevaPhoto)
-                        }
-                    }
+                    val emailUbiHist =
+                        nameUidMap[selectedName]  // Obtenemos el UID asociado al nombre
 
-                    showDatePickerDialog(emailUbiHist)   // Muestra el Selector del dia
+                    Log.i(TAG, "Email a consultar: $emailUbiHist")
+
+
+                    if (emailUbiHist!!.isEmpty()) { // Si el EditText no esta vacio
+                        Toast.makeText(this, "Seleccione un email valido!", Toast.LENGTH_LONG)
+                            .show()
+
+                    } else {
+                        val docRef = db.collection("users").document(emailUbiHist!!)
+                        docRef.get().addOnSuccessListener { document1 ->
+                            val nuevaPhoto = document1.getString("photoUrl")
+                            if (nuevaPhoto != null) {
+                                cargarFotoEnMarker(nuevaPhoto)
+                            }
+                        }
+
+                        showDatePickerDialog(emailUbiHist)   // Muestra el Selector del dia
+                    }
                 }
             }
             // Llamamos a la funcion para crear el mapa
@@ -184,7 +195,8 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
             Log.e(TAG, "Error al cargar la imagen: ${it.message}")
         }
     }
-///////////////////////////////////////////// FUNCIONES DEL MAPA ////////////////////////////////////////////////////
+
+    ///////////////////////////////////////////// FUNCIONES DEL MAPA ////////////////////////////////////////////////////
     private fun createMapFragment() {
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
@@ -207,14 +219,28 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
         map.isTrafficEnabled = trafficEnabled
     }
 
-    // Funcion para mostrar el Selector del Mapa
+    // Función para mostrar el Selector del Mapa
     private fun showDatePickerDialog(emailhis: String?) {
         val calendar = Calendar.getInstance()
         val datePickerDialog = DatePickerDialog(
             this,
             { _: DatePicker, year: Int, month: Int, dayOfMonth: Int ->
-                val selectedDate = String.format(Locale.getDefault(), "%02d-%02d-%d", dayOfMonth, month + 1, year)
-                loadLocationsForDate(selectedDate,emailhis)
+                // Formato para buscar en la base de datos
+                val selectedDateForSearch =
+                    String.format(Locale.getDefault(), "%02d-%02d-%d", dayOfMonth, month + 1, year)
+
+                // Formato para mostrar al usuario
+                val calendarSelected = Calendar.getInstance()
+                calendarSelected.set(year, month, dayOfMonth)
+                val displayDateFormat = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale("es", "MX"))
+                val displayDate = displayDateFormat.format(calendarSelected.time)
+
+                // Actualiza la vista con el formato deseado
+                val selectDates = findViewById<TextView>(R.id.selectDate)
+                selectDates.text = displayDate
+
+                // Carga las ubicaciones usando el formato para búsqueda
+                loadLocationsForDate(selectedDateForSearch, emailhis)
             },
             calendar.get(Calendar.YEAR),
             calendar.get(Calendar.MONTH),
@@ -226,22 +252,21 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
     // Funcion para cargar las ubicaciones guardadas en la base de datos
     private fun loadLocationsForDate(date: String, emailhis: String?) {
 
-            val NombreView = findViewById<TextView>(R.id.NombreUsuario)
+        val NombreView = findViewById<TextView>(R.id.NombreUsuario)
 
-            db.collection("users").document(emailhis!!).get().addOnSuccessListener {
-                NombreView.text = it.getString("Nombres")
-            }
+        db.collection("users").document(emailhis!!).get().addOnSuccessListener {
+            NombreView.text = it.getString("Nombres")
+        }
 
-            // Conexiona a la base de datos Firestore
-            db.collection("users").document(emailhis!!).collection(date)
+        // Conexiona a la base de datos Firestore
+        db.collection("users").document(emailhis!!).collection(date)
             .orderBy("timestamp")   // Ordena por fecha en orden ascendente deacuerdo con el timestamp
             .get()
             .addOnSuccessListener { documents ->
                 if (documents.isEmpty) {
                     Log.d(TAG, "No se encontraron documentos para la fecha: $date")
                     return@addOnSuccessListener
-                }
-                else{
+                } else {
                     val FotoPerfil = findViewById<ImageView>(R.id.PhotoPerfil)
                     FotoPerfil.setImageBitmap(bitmap)
                     bitmap = createCustomMarker(bitmap)
@@ -260,7 +285,10 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
                         }
                         Log.d(TAG, "Documento recuperado: $document")
                     }
-                    showLocationHistoryOnMap(latLngList,timestampList)    // Muestra la ubicacion en el mapa
+                    showLocationHistoryOnMap(
+                        latLngList,
+                        timestampList
+                    )    // Muestra la ubicacion en el mapa
                 }
             }
             .addOnFailureListener { e ->
@@ -271,7 +299,10 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     // Funcion para mostrar las ubicaciones en el mapa
-    private fun showLocationHistoryOnMap(latLngList: List<LatLng>, timestampList: MutableList<Long>) {
+    private fun showLocationHistoryOnMap(
+        latLngList: List<LatLng>,
+        timestampList: MutableList<Long>
+    ) {
         map.clear() // Limpia el mapa antes de agregar la ruta
 
         if (latLngList.isNotEmpty()) {
@@ -285,7 +316,10 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
             // Opcional: agrega marcadores en cada punto
             for (i in latLngList.indices) {
                 val horaFormateada = convertirTimestamp(timestampList[i])
-                map.addMarker(MarkerOptions().position(latLngList[i]).title(horaFormateada).icon(BitmapDescriptorFactory.fromBitmap(bitmap)))
+                map.addMarker(
+                    MarkerOptions().position(latLngList[i]).title(horaFormateada)
+                        .icon(BitmapDescriptorFactory.fromBitmap(bitmap))
+                )
             }
         }
     }
@@ -316,13 +350,23 @@ private fun createCustomMarker(bitmap: Bitmap): Bitmap {
     // Dibuja el círculo de fondo del marker
     paint.color = Color.WHITE
     paint.isAntiAlias = true
-    canvas.drawCircle((markerSize / 2).toFloat(), (markerSize / 2).toFloat(), (markerSize / 2).toFloat(), paint)
+    canvas.drawCircle(
+        (markerSize / 2).toFloat(),
+        (markerSize / 2).toFloat(),
+        (markerSize / 2).toFloat(),
+        paint
+    )
 
     // Recortar la imagen en forma circular
     val roundedBitmap = Bitmap.createBitmap(markerSize, markerSize, Bitmap.Config.ARGB_8888)
     val roundedCanvas = Canvas(roundedBitmap)
     val path = Path()
-    path.addCircle((markerSize / 2).toFloat(), (markerSize / 2).toFloat(), (markerSize / 2).toFloat(), Path.Direction.CCW)
+    path.addCircle(
+        (markerSize / 2).toFloat(),
+        (markerSize / 2).toFloat(),
+        (markerSize / 2).toFloat(),
+        Path.Direction.CCW
+    )
     roundedCanvas.clipPath(path)
 
     roundedCanvas.drawBitmap(

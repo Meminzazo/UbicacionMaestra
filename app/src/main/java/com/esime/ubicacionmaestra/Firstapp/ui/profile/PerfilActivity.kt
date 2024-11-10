@@ -279,6 +279,10 @@ class PerfilActivity : AppCompatActivity() {
         // Boton para registrar el chat ID del bot
 
         botonHablarConBot.setOnClickListener {
+            // Copiar el contenido al portapapeles
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val clip = ClipData.newPlainText("Codigo de Enlace", uid)
+            clipboard.setPrimaryClip(clip)
             // Intent para abrir la conversación con el bot
             val botname = "ubimaster_bot"
             val intent = Intent(Intent.ACTION_VIEW)
@@ -524,7 +528,7 @@ class PerfilActivity : AppCompatActivity() {
             val nombres = nombresEditText.text.toString()
             val apellidos = apellidosEditText.text.toString()
             val telefono = telefonoEditText.text.toString()
-            val chat_id = "null"
+            val chat_id = null
 
             val userData = hashMapOf(   // Formato para la base de datos
                 "Nombres" to nombres,
