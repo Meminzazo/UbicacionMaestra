@@ -29,6 +29,7 @@ import com.google.android.material.internal.ViewUtils.hideKeyboard
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.database
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
@@ -55,6 +56,7 @@ class PerfilActivity : AppCompatActivity() {
     private lateinit var fileUri: Uri
 
     private var uid: String? = null
+
     //private var emailCon: String? = null
     private var GrupoIDPublic: String? = null
 
@@ -120,25 +122,28 @@ class PerfilActivity : AppCompatActivity() {
         //emailCon = bundle?.getString("Email1")              //parametro del home layut "como nombramos al edit text"
         uid = bundle?.getString("UID")
 
-        IDGrupo.transformationMethod = PasswordTransformationMethod.getInstance()   // Para que el ID del grupo este oculto
+        IDGrupo.transformationMethod =
+            PasswordTransformationMethod.getInstance()   // Para que el ID del grupo este oculto
 
         // Obtener el documento del usuario en la base de datos y poder usar los datos
         val docRef3 = db.collection("users").document(uid!!)
-        docRef3.get().addOnSuccessListener { document ->    // Si se encuentra el documento se ejecuta el codigo dentro
-            val GrupoID = document.getString("GrupoID") // Gurada el ID del usuario actual
-            val nuevaPhoto = document.getString("photoUrl")
-            IDGrupo.text = GrupoID
-            if (GrupoID != "-") {
-                if (nuevaPhoto != null){
-                    cargarFoto(nuevaPhoto)
+        docRef3.get()
+            .addOnSuccessListener { document ->    // Si se encuentra el documento se ejecuta el codigo dentro
+                val GrupoID = document.getString("GrupoID") // Gurada el ID del usuario actual
+                val nuevaPhoto = document.getString("photoUrl")
+                IDGrupo.text = GrupoID
+                if (GrupoID != "-") {
+                    if (nuevaPhoto != null) {
+                        cargarFoto(nuevaPhoto)
+                    }
+                    GrupoIDPublic = GrupoID
+                    PertenecerGrupo.text =
+                        "Pertenece al grupo" // Si tiene un ID de grupo cambia el texto a que si Pertence a un grupo
+                } else {
+                    PertenecerGrupo.text =
+                        "No perteneces a un grupo"    // Si no tiene un ID de grupo cambia el texto a que no pertenece a un grupo
                 }
-                GrupoIDPublic = GrupoID
-                PertenecerGrupo.text = "Pertenece al grupo" // Si tiene un ID de grupo cambia el texto a que si Pertence a un grupo
             }
-            else{
-                PertenecerGrupo.text = "No perteneces a un grupo"    // Si no tiene un ID de grupo cambia el texto a que no pertenece a un grupo
-            }
-        }
 
         // Copiar el ID del grupo al portapapeles
         IDGrupo.setOnClickListener {
@@ -156,124 +161,171 @@ class PerfilActivity : AppCompatActivity() {
 
         // Botones para crear un grupo
         CreateGrupoButton.setOnClickListener {
-            val docRef = db.collection("users").document(uid!!)     // Se obtiene el documento del usuario actual
-            docRef.get().addOnSuccessListener { document -> // Si se encuentra el documento se ejecuta el codigo dentro
-                val GrupoID = document.getString("GrupoID") // Guarda el ID del grupo del usuario actual
-                if (GrupoID == "-") {   // Si el ID del grupo del usuario actual es igual a "-" se la asigna un nuevo ID de grupo
-                    val randomKey = generateRandomKey() // Genera un nuevo ID de grupo aleatorio
-                    db.collection("users").document(uid!!)
-                        .update("GrupoID", randomKey)   // Actualiza el ID del grupo del usuario actual en la base de datos
-                    IDGrupo.text = randomKey
-                    PertenecerGrupo.text = "Pertenece al grupo"  // Cambia el texto del botón para indicar que el usuario pertenece al grupo
+            val docRef = db.collection("users")
+                .document(uid!!)     // Se obtiene el documento del usuario actual
+            docRef.get()
+                .addOnSuccessListener { document -> // Si se encuentra el documento se ejecuta el codigo dentro
+                    val GrupoID =
+                        document.getString("GrupoID") // Guarda el ID del grupo del usuario actual
+                    if (GrupoID == "-") {   // Si el ID del grupo del usuario actual es igual a "-" se la asigna un nuevo ID de grupo
+                        val randomKey = generateRandomKey() // Genera un nuevo ID de grupo aleatorio
+                        db.collection("users").document(uid!!)
+                            .update(
+                                "GrupoID",
+                                randomKey
+                            )   // Actualiza el ID del grupo del usuario actual en la base de datos
+                        IDGrupo.text = randomKey
+                        PertenecerGrupo.text =
+                            "Pertenece al grupo"  // Cambia el texto del botón para indicar que el usuario pertenece al grupo
 
-                    // Datos de la base de datos (Formato)
-                    val groupData = hashMapOf(
-                        "email1" to uid,
-                        "email2" to null,
-                        "email3" to null,
-                        "email4" to null,
-                        "email5" to null,
-                        "email6" to null,
-                        "email7" to null,
-                    )
-                    GrupoIDPublic = randomKey
-                    db.collection("grupos").document(randomKey).set(groupData)
+                        // Datos de la base de datos (Formato)
+                        val groupData = hashMapOf(
+                            "email1" to uid,
+                            "email2" to null,
+                            "email3" to null,
+                            "email4" to null,
+                            "email5" to null,
+                            "email6" to null,
+                            "email7" to null,
+                        )
+                        GrupoIDPublic = randomKey
+                        db.collection("grupos").document(randomKey).set(groupData)
+                    } else {
+                        Toast.makeText(this, "Ya perteneces a un grupo", Toast.LENGTH_SHORT).show()
+                    }
                 }
-                else{
-                    Toast.makeText(this, "Ya perteneces a un grupo", Toast.LENGTH_SHORT).show()
-                }
-            }
         }
 
         JoinGrupoButton.setOnClickListener {    // Boton para unirse a un grupo
-            val docRef = db.collection("users").document(uid!!)    // Se obtiene el documento del usuario actual
-            docRef.get().addOnSuccessListener { document -> // Si se encuentra el documento se ejecuta el código dentro
-                val GrupoID = document.getString("GrupoID") // Guarda el ID del grupo del usuario actual
-                if (GrupoID == "-") {   // Si el ID del grupo del usuario actual es igual a "-" desplegará el menú emergente para ingresar el ID del grupo
-                    mostrarMenuEmergente { ID ->
-                        db.collection("users").document(uid!!).update("GrupoID", ID) // Actualiza el ID del grupo que ingresó en el menú emergente en la base de datos
-                        PertenecerGrupo.text = "Pertenece al grupo" // Cambia el texto del botón para indicar que el usuario pertenece al grupo
-                        IDGrupo.text = ID
+            val docRef = db.collection("users")
+                .document(uid!!)    // Se obtiene el documento del usuario actual
+            docRef.get()
+                .addOnSuccessListener { document -> // Si se encuentra el documento se ejecuta el código dentro
+                    val GrupoID =
+                        document.getString("GrupoID") // Guarda el ID del grupo del usuario actual
+                    if (GrupoID == "-") {   // Si el ID del grupo del usuario actual es igual a "-" desplegará el menú emergente para ingresar el ID del grupo
+                        mostrarMenuEmergente { ID ->
+                            db.collection("users").document(uid!!).update(
+                                "GrupoID",
+                                ID
+                            ) // Actualiza el ID del grupo que ingresó en el menú emergente en la base de datos
+                            PertenecerGrupo.text =
+                                "Pertenece al grupo" // Cambia el texto del botón para indicar que el usuario pertenece al grupo
+                            IDGrupo.text = ID
 
-                        val grupoRef = db.collection("grupos").document(ID)
+                            val grupoRef = db.collection("grupos").document(ID)
 
-                        grupoRef.get().addOnSuccessListener { grupoDocument ->
-                            if (grupoDocument.exists()) {
-                                // Recorre los campos del grupo
-                                var campoDisponible: String? = null
-                                for (i in 1..7) {
-                                    val emailField = "email$i"
-                                    val emailValue = grupoDocument.getString(emailField)
-                                    if (emailValue == null) {
-                                        campoDisponible = emailField
-                                        break
+                            grupoRef.get().addOnSuccessListener { grupoDocument ->
+                                if (grupoDocument.exists()) {
+                                    // Recorre los campos del grupo
+                                    var campoDisponible: String? = null
+                                    for (i in 1..7) {
+                                        val emailField = "email$i"
+                                        val emailValue = grupoDocument.getString(emailField)
+                                        if (emailValue == null) {
+                                            campoDisponible = emailField
+                                            break
+                                        }
                                     }
-                                }
-                                if (campoDisponible != null) {
-                                    // Si hay un campo disponible, agrega el nuevo email
-                                    grupoRef.update(campoDisponible, uid)
-                                    Toast.makeText(this, "Te has unido al grupo", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    // Si no hay campos disponibles, muestra un mensaje
-                                    Toast.makeText(this, "El grupo está lleno", Toast.LENGTH_SHORT).show()
+                                    if (campoDisponible != null) {
+                                        // Si hay un campo disponible, agrega el nuevo email
+                                        grupoRef.update(campoDisponible, uid)
+                                        Toast.makeText(
+                                            this,
+                                            "Te has unido al grupo",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    } else {
+                                        // Si no hay campos disponibles, muestra un mensaje
+                                        Toast.makeText(
+                                            this,
+                                            "El grupo está lleno",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
                                 }
                             }
                         }
+                    } else {
+                        Toast.makeText(
+                            this,
+                            "Ya perteneces a un grupo, si quieres cambiar a otro grupo por favor salte del grupo actual",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
-                } else {
-                    Toast.makeText(this, "Ya perteneces a un grupo, si quieres cambiar a otro grupo por favor salte del grupo actual", Toast.LENGTH_SHORT).show()
                 }
-            }
         }
 
 
         SalirGrupoButton.setOnClickListener {   // Botón para salir de un grupo
-            val docRef = db.collection("users").document(uid!!)    // Se obtiene el documento del usuario actual
-            docRef.get().addOnSuccessListener { document -> // Si se encuentra el documento se ejecuta el código dentro
-                val GrupoID = document.getString("GrupoID") // Guarda el ID del grupo del usuario actual
-                if (GrupoID != "-") {   // Si el ID del grupo del usuario actual es diferente de "-" ejecuta el código dentro
+            val docRef = db.collection("users")
+                .document(uid!!)    // Se obtiene el documento del usuario actual
+            docRef.get()
+                .addOnSuccessListener { document -> // Si se encuentra el documento se ejecuta el código dentro
+                    val GrupoID =
+                        document.getString("GrupoID") // Guarda el ID del grupo del usuario actual
+                    if (GrupoID != "-") {   // Si el ID del grupo del usuario actual es diferente de "-" ejecuta el código dentro
 
-                    val grupoRef = db.collection("grupos").document(GrupoID!!)
-                    grupoRef.get().addOnSuccessListener { grupoDocument ->
-                        if (grupoDocument.exists()) {
-                            val emailsMap = grupoDocument.data
-                            var emailToRemove: String? = null
+                        val grupoRef = db.collection("grupos").document(GrupoID!!)
+                        grupoRef.get().addOnSuccessListener { grupoDocument ->
+                            if (grupoDocument.exists()) {
+                                val emailsMap = grupoDocument.data
+                                var emailToRemove: String? = null
 
-                            // Busca el email del usuario en el grupo
-                            for ((key, value) in emailsMap!!) {
-                                if (value == uid) {
-                                    emailToRemove = key
-                                    break
+                                // Busca el email del usuario en el grupo
+                                for ((key, value) in emailsMap!!) {
+                                    if (value == uid) {
+                                        emailToRemove = key
+                                        break
+                                    }
                                 }
-                            }
 
-                            if (emailToRemove != null) {
-                                // Actualiza el campo del email del grupo a null (remueve el email del usuario)
-                                grupoRef.update(emailToRemove, null).addOnSuccessListener {
-                                    // Actualiza el GrupoID del usuario a "-"
-                                    db.collection("users").document(uid!!).update("GrupoID", "-")
-                                        .addOnSuccessListener {
-                                            // Mensaje de éxito
-                                            Toast.makeText(this, "Has salido del grupo", Toast.LENGTH_SHORT).show()
-                                            PertenecerGrupo.text = "No perteneces a un grupo"   // Cambia el texto del botón para indicar que el usuario no pertenece a un grupo
-                                            IDGrupo.text = "-"  // Cambia el ID del grupo del usuario actual a "-"
-                                        }
-                                        .addOnFailureListener {
-                                            Toast.makeText(this, "Error al actualizar tu grupo", Toast.LENGTH_SHORT).show()
-                                        }
-                                }.addOnFailureListener {
-                                    Toast.makeText(this, "Error al salir del grupo", Toast.LENGTH_SHORT).show()
+                                if (emailToRemove != null) {
+                                    // Actualiza el campo del email del grupo a null (remueve el email del usuario)
+                                    grupoRef.update(emailToRemove, null).addOnSuccessListener {
+                                        // Actualiza el GrupoID del usuario a "-"
+                                        db.collection("users").document(uid!!)
+                                            .update("GrupoID", "-")
+                                            .addOnSuccessListener {
+                                                // Mensaje de éxito
+                                                Toast.makeText(
+                                                    this,
+                                                    "Has salido del grupo",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                                PertenecerGrupo.text =
+                                                    "No perteneces a un grupo"   // Cambia el texto del botón para indicar que el usuario no pertenece a un grupo
+                                                IDGrupo.text =
+                                                    "-"  // Cambia el ID del grupo del usuario actual a "-"
+                                            }
+                                            .addOnFailureListener {
+                                                Toast.makeText(
+                                                    this,
+                                                    "Error al actualizar tu grupo",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
+                                    }.addOnFailureListener {
+                                        Toast.makeText(
+                                            this,
+                                            "Error al salir del grupo",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                } else {
+                                    // Si no se encuentra el correo en el grupo
+                                    Toast.makeText(
+                                        this,
+                                        "Tu correo no fue encontrado en el grupo",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 }
-                            } else {
-                                // Si no se encuentra el correo en el grupo
-                                Toast.makeText(this, "Tu correo no fue encontrado en el grupo", Toast.LENGTH_SHORT).show()
                             }
                         }
+                    } else {
+                        Toast.makeText(this, "No perteneces a un grupo", Toast.LENGTH_SHORT).show()
                     }
-                } else {
-                    Toast.makeText(this, "No perteneces a un grupo", Toast.LENGTH_SHORT).show()
                 }
-            }
         }
 
         // Boton para registrar el chat ID del bot
@@ -304,7 +356,6 @@ class PerfilActivity : AppCompatActivity() {
         }
 
 
-
         // Obtener los datos del usuario de la base de datos y mostrarlos en los campos
         val docRef = db.collection("users").document(uid!!)
         docRef.get().addOnSuccessListener { document ->
@@ -312,13 +363,13 @@ class PerfilActivity : AppCompatActivity() {
                 val nombres = document.getString("Nombres")
                 val apellidos = document.getString("Apellidos")
                 val telefono = document.getString("Telefono")
-                if (nombres != null){
+                if (nombres != null) {
                     nombresEditText.setText(nombres)
                 }
-                if (apellidos != null){
+                if (apellidos != null) {
                     apellidosEditText.setText(apellidos)
                 }
-                if (telefono != null){
+                if (telefono != null) {
                     telefonoEditText.setText(telefono)
                 }
             } else {
@@ -327,7 +378,7 @@ class PerfilActivity : AppCompatActivity() {
         }
 
         saveButton.setOnClickListener {// Boton para guardar los datos del usuario
-            if(resultUri != null){
+            if (resultUri != null) {
                 subirFoto(resultUri!!)
             }
             uploadProfileData(uid!!) // Funcion para guardar los datos del usuario en la base de datos
@@ -335,13 +386,15 @@ class PerfilActivity : AppCompatActivity() {
         }
 
 
-
         val btnSeleccionarFoto: Button = findViewById(R.id.btnSeleccionarFoto)
         btnSeleccionarFoto.setOnClickListener {
             val intent = Intent()
             intent.type = "image/*"
             intent.action = Intent.ACTION_GET_CONTENT
-            startActivityForResult(Intent.createChooser(intent, "Selecciona una imagen"), PICK_IMAGE_REQUEST)
+            startActivityForResult(
+                Intent.createChooser(intent, "Selecciona una imagen"),
+                PICK_IMAGE_REQUEST
+            )
         }
         nombresEditText.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_NEXT) {
@@ -373,10 +426,12 @@ class PerfilActivity : AppCompatActivity() {
             }
         }
     }
+
     fun View.hideKeyboard() {
         val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(windowToken, 0)
     }
+
     @SuppressLint("MissingSuperCall")
     override fun onBackPressed() {
         val intent = Intent(this, HomeActivity::class.java)
@@ -434,7 +489,11 @@ class PerfilActivity : AppCompatActivity() {
         // Redimensiona el bitmap antes de subir
         val bitmap = redimensionarBitmap(fileUri)
         val baos = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos) // Puedes ajustar el 80 para cambiar la calidad
+        bitmap.compress(
+            Bitmap.CompressFormat.JPEG,
+            80,
+            baos
+        ) // Puedes ajustar el 80 para cambiar la calidad
 
         val data = baos.toByteArray()
         val uploadTask = storageRef.putBytes(data)
@@ -478,7 +537,11 @@ class PerfilActivity : AppCompatActivity() {
                 Toast.makeText(this, "Foto guardada exitosamente", Toast.LENGTH_SHORT).show()
             }.addOnFailureListener { e ->
                 Log.e(TAG, "Error al guardar la URL: $e")
-                Toast.makeText(this, "Error al guardar Foto. Revise su conexión a internet y vuelva a intentarlo.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    this,
+                    "Error al guardar Foto. Revise su conexión a internet y vuelva a intentarlo.",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
     }
 
@@ -500,7 +563,11 @@ class PerfilActivity : AppCompatActivity() {
                 onDataEntered(datoIngresado)
             } else {
                 // Si el formato no es válido, mostrar un mensaje de error
-                Toast.makeText(this, "Formato de clave inválido. El ID del Grupo debe tener el formato xxxx-xxxx-xxxx", Toast.LENGTH_LONG).show()
+                Toast.makeText(
+                    this,
+                    "Formato de clave inválido. El ID del Grupo debe tener el formato xxxx-xxxx-xxxx",
+                    Toast.LENGTH_LONG
+                ).show()
                 // Volver a mostrar el menú emergente
                 mostrarMenuEmergente(onDataEntered)
             }
@@ -524,34 +591,45 @@ class PerfilActivity : AppCompatActivity() {
     // Funcion para guardar los datos del usuario en la base de datos
     private fun uploadProfileData(emailCon: String) {
 
-            val email = emailCon
-            val nombres = nombresEditText.text.toString()
-            val apellidos = apellidosEditText.text.toString()
-            val telefono = telefonoEditText.text.toString()
-            val chat_id = null
+        val email = emailCon
+        val nombres = nombresEditText.text.toString()
+        val apellidos = apellidosEditText.text.toString()
+        val telefono = telefonoEditText.text.toString()
+        val chat_id = null
 
-            val userData = hashMapOf(   // Formato para la base de datos
-                "Nombres" to nombres,
-                "Apellidos" to apellidos,
-                "Telefono" to telefono,
-                "chat_id" to chat_id
-            )
-
-
-
-
-            // Conexion con la base de datos para guardar los datos del usuario
-            db.collection("users").document(email)
-                .update(userData as Map<String, Any>)
-                .addOnSuccessListener {
-                    Log.d(TAG, "Datos guardados exitosamente")
-                    Toast.makeText(this, "Datos guardados exitosamente", Toast.LENGTH_SHORT).show()
-                    onBackPressed()
-                }
-                .addOnFailureListener { e ->
-                    Log.w(TAG, "Error al guardar datos", e)
-                    Toast.makeText(this, "Error al guardar datos. Revise su conexión a internet y vuelva a intentarlo.", Toast.LENGTH_SHORT).show()
-                }
+        val userData = hashMapOf(   // Formato para la base de datos
+            "Nombres" to nombres,
+            "Apellidos" to apellidos,
+            "Telefono" to telefono,
+            "chat_id" to chat_id
+        )
+        // Conexion con la base de datos para guardar los datos del usuario
+        db.collection("users").document(email)
+            .update(userData as Map<String, Any>)
+            .addOnSuccessListener {
+                Log.d(TAG, "Datos guardados exitosamente")
+                Toast.makeText(this, "Datos guardados exitosamente", Toast.LENGTH_SHORT).show()
+                onBackPressed()
             }
+            .addOnFailureListener { e ->
+                Log.w(TAG, "Error al guardar datos", e)
+                Toast.makeText(
+                    this,
+                    "Error al guardar datos. Revise su conexión a internet y vuelva a intentarlo.",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        // Conexión con Realtime Database
+        val realtimeDb = FirebaseDatabase.getInstance().getReference("users")
+
+        // Agregar o actualizar solo el campo "Nombre" dentro del ID del usuario
+        realtimeDb.child(email).child("Nombre").setValue(nombres)
+            .addOnSuccessListener {
+                Log.d(TAG, "Nombre guardado exitosamente en Realtime Database")
+            }
+            .addOnFailureListener { e ->
+                Log.w(TAG, "Error al guardar el nombre en Realtime Database", e)
+            }
+    }
 }
 

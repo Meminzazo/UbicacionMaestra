@@ -1,5 +1,11 @@
 package com.esime.ubicacionmaestra.Firstapp.ui.utilities.activitiesUseful
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Rect
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.enableEdgeToEdge
@@ -13,6 +19,7 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.firebase.database.DatabaseReference
@@ -21,6 +28,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import android.graphics.Path
+
 
 class DetallesDelitosActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var mMap: GoogleMap
@@ -41,15 +50,28 @@ class DetallesDelitosActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
         mMap.uiSettings.isZoomControlsEnabled = true
+
         // Mostrar los markers de los delitos cercanos en el mapa
         delitosCercanos?.let { listaDelitos ->
             if (listaDelitos.isNotEmpty()) {
                 for (delito in listaDelitos) {
                     val ubicacionDelito = LatLng(delito.latitud, delito.longitud)
+
+                    // Obtener el ícono adecuado para este tipo de delito
+                    val iconResId = getMarkerIconForDelito(delito.categoriaDelito)
+
+                    // Redimensionar el ícono a un tamaño adecuado
+                    val resizedIcon = resizeBitmap(iconResId, 100, 100) // Ajustar el tamaño según sea necesario
+
+                    // Crear un marcador personalizado con el ícono redimensionado
+                    val customMarkerBitmap = createCustomMarker(resizedIcon)
+
+                    // Agregar el marcador con el ícono personalizado
                     mMap.addMarker(
                         MarkerOptions()
                             .position(ubicacionDelito)
-                            .title("${delito.categoriaDelito} - ${delito.delito}")
+                            .title(delito.delito)
+                            .icon(BitmapDescriptorFactory.fromBitmap(customMarkerBitmap))
                     )
                 }
 
@@ -60,4 +82,73 @@ class DetallesDelitosActivity : AppCompatActivity(), OnMapReadyCallback {
             }
         }
     }
+
+    // Función para redimensionar un Bitmap
+    private fun resizeBitmap(resourceId: Int, width: Int, height: Int): Bitmap {
+        val bitmap = BitmapFactory.decodeResource(resources, resourceId)
+        return Bitmap.createScaledBitmap(bitmap, width, height, false)
+    }
+
+    // Función para crear un marcador personalizado con la imagen redimensionada
+    private fun createCustomMarker(bitmap: Bitmap): Bitmap {
+        val markerSize = 100 // Tamaño del marcador en píxeles
+        val markerBitmap = Bitmap.createBitmap(markerSize, markerSize, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(markerBitmap)
+        val paint = Paint()
+
+        // Dibuja el círculo de fondo del marker
+        paint.color = Color.WHITE
+        paint.isAntiAlias = true
+        canvas.drawCircle(
+            (markerSize / 2).toFloat(),
+            (markerSize / 2).toFloat(),
+            (markerSize / 2).toFloat(),
+            paint
+        )
+
+        // Recortar la imagen en forma circular
+        val roundedBitmap = Bitmap.createBitmap(markerSize, markerSize, Bitmap.Config.ARGB_8888)
+        val roundedCanvas = Canvas(roundedBitmap)
+        val path = Path()
+        path.addCircle(
+            (markerSize / 2).toFloat(),
+            (markerSize / 2).toFloat(),
+            (markerSize / 2).toFloat(),
+            Path.Direction.CCW
+        )
+        roundedCanvas.clipPath(path)
+
+        roundedCanvas.drawBitmap(
+            bitmap,
+            Rect(0, 0, bitmap.width, bitmap.height),
+            Rect(0, 0, markerSize, markerSize),
+            null
+        )
+
+        // Dibuja la imagen recortada en el centro del marcador
+        canvas.drawBitmap(roundedBitmap, 0f, 0f, null)
+
+        return markerBitmap
+    }
+
+
+    private fun getMarkerIconForDelito(categoriaDelito: String): Int {
+        return when (categoriaDelito) {
+            "DELITO DE BAJO IMPACTO" -> R.drawable.ic_bajo_impacto
+            "HOMICIDIO DOLOSO" -> R.drawable.ic_homicidio_doloso
+            "LESIONES DOLOSAS POR DISPARO" -> R.drawable.ic_lesiones_dolosas
+            "ROBO A CASA HABITACION CON VIOLENCIA" -> R.drawable.ic_robo_casa
+            "ROBO A CUENTAHABIENTE SALIENDO DEL CAJERO CON VIOLENCIA" -> R.drawable.ic_robo_cuentahabiente
+            "ROBO A NEGOCIO CON VIOLENCIA" -> R.drawable.ic_robo_negocio
+            "ROBO A PASAJERO A BORDO DE MICROBUS CON Y SIN VIOLENCIA" -> R.drawable.ic_robo_microbus
+            "ROBO A PASAJERO A BORDO DE TAXI CON VIOLENCIA" -> R.drawable.ic_robo_taxi
+            "ROBO A PASAJERO A BORDO DE METRO CON Y SIN VIOLENCIA" -> R.drawable.ic_robo_metro
+            "ROBO A REPARTIDOR CON Y SIN VIOLENCIA" -> R.drawable.ic_robo_repartidor
+            "ROBO A TRANSEUNTE EN VÍA PÚBLICA CON Y SIN VIOLENCIA" -> R.drawable.ic_robo_transeunte
+            "ROBO DE VEHÍCULO CON Y SIN VIOLENCIA" -> R.drawable.ic_robo_vehiculo
+            "VIOLACIÓN" -> R.drawable.ic_violacion
+            else -> R.drawable.ic_default // Un ícono por defecto si no coincide ningún tipo
+        }
+    }
+
 }

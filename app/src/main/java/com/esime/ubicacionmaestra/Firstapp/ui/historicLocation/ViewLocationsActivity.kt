@@ -342,7 +342,7 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
 
 // Función para crear un marcador personalizado
 private fun createCustomMarker(bitmap: Bitmap): Bitmap {
-    val markerSize = 120 // Tamaño del marcador en píxeles
+    val markerSize = 100 // Tamaño del marcador en píxeles
     val markerBitmap = Bitmap.createBitmap(markerSize, markerSize, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(markerBitmap)
     val paint = Paint()

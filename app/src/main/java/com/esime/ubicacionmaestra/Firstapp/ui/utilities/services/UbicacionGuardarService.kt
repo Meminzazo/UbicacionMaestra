@@ -150,7 +150,7 @@ class UbicacionGuardarService : Service() {
 
     // Funcion para guardar el historial de ubicación en la base de datos en un documento con la fecha de cuando se esta guardando
     fun saveLocation(uid: String, latitude: Double, longitude: Double) {
-        val currentDate = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(Date())
+        val currentDate = SimpleDateFormat("dd-MM-yyyy", Locale("es", "MX")).format(Date())
         val locationData = hashMapOf(   // Datos a guardar en la base de datos con ese formato
             "latitude" to latitude,
             "longitude" to longitude,

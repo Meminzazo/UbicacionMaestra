@@ -6,6 +6,11 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.Rect
 import android.location.Location
 import android.os.Bundle
 import android.util.Log
@@ -24,6 +29,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.esime.ubicacionmaestra.Firstapp.ui.home.MenuPrincipalActivity
 import com.esime.ubicacionmaestra.R
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
@@ -67,7 +73,7 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
     private lateinit var bitmap: Bitmap // Declaración global del bitmap
 
     private var urllist = arrayOfNulls<String>(7)
-
+    private lateinit var imageViewList: List<ImageView>
     private var namelist = arrayOfNulls<String>(7)
 
 
@@ -87,15 +93,17 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
         database = FirebaseDatabase.getInstance().reference
 
         val switchConsult = findViewById<SwitchMaterial>(R.id.ConsultarUbicacion)
-        val photoPerfil1 = findViewById<ImageView>(R.id.photoPerfil1)
-        val photoPerfil2 = findViewById<ImageView>(R.id.photoPerfil2)
-        val photoPerfil3 = findViewById<ImageView>(R.id.photoPerfil3)
-        val photoPerfil4 = findViewById<ImageView>(R.id.photoPerfil4)
-        val photoPerfil5 = findViewById<ImageView>(R.id.photoPerfil5)
-        val photoPerfil6 = findViewById<ImageView>(R.id.photoPerfil6)
-        val photoPerfil7 = findViewById<ImageView>(R.id.photoPerfil7)
+        // Inicializar las listas
+        imageViewList = listOf(
+            findViewById(R.id.photoPerfil1),
+            findViewById(R.id.photoPerfil2),
+            findViewById(R.id.photoPerfil3),
+            findViewById(R.id.photoPerfil4),
+            findViewById(R.id.photoPerfil5),
+            findViewById(R.id.photoPerfil6),
+            findViewById(R.id.photoPerfil7)
+        )
 
-        val Imageviewlist = arrayOf(photoPerfil1, photoPerfil2, photoPerfil3, photoPerfil4, photoPerfil5, photoPerfil6, photoPerfil7)
 
         val docGroupRef = db.collection("users").document(auth.currentUser?.uid!!)
 
@@ -130,7 +138,7 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
                                             val photoUrl = document3.getString("photoUrl")
                                             if (!photoUrl.isNullOrEmpty()) {
                                                 urllist[i] = photoUrl
-                                                cargarFoto(urllist[i]!!, Imageviewlist[i])
+                                                cargarFoto(urllist[i]!!, imageViewList[i])
                                             }
                                         } else {
                                             Log.w(TAG, "UID vacío en la posición $i")
@@ -150,8 +158,8 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
         }
 
         // Bucle para configurar los ImageView
-        for (i in Imageviewlist.indices) {
-            Imageviewlist[i].setOnClickListener {
+        for (i in imageViewList.indices) {
+            imageViewList[i].setOnClickListener {
                 val uid = uidList[i] // Obtén el UID correspondiente para este ImageView
                 if (uid != null && uid.isNotEmpty()) {
                     // Referencia a la base de datos en el nodo de 'users' y el UID correspondiente
@@ -165,13 +173,16 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
                                 val miembro = "Miembro #${i + 1}"
                                 val fecha = snapshot.child("date").getValue(String::class.java) ?: "00/00/0000"
                                 val hora = snapshot.child("timestamp").getValue(Double::class.java) ?: 0.0
+                                val nombre = snapshot.child("Nombre").getValue(String::class.java) ?: "Sin nombre"
 
                                 val hourFormated = convertirTimestamp(hora.toLong())
 
                                 Log.d(TAG, "Miembro: $miembro, Fecha: $fecha y hora: $hourFormated")
 
                                 // Mostrar la información en un PopupWindow
-                                showMemberPopup(it, miembro, fecha, hourFormated)
+                                showMemberPopup(it, miembro, fecha, hourFormated,nombre)
+                                // Mover el mapa al marcador correspondiente
+                                moveToMemberLocation(i)
                             } else {
                                 Log.w(TAG, "No se encontró información para el UID: $uid")
                             }
@@ -188,74 +199,75 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
             }
         }
     }
-
-    private fun convertirTimestamp(timestamp: Long): String {
-        return try {
-            // Crea una instancia de Date usando el timestamp en milisegundos
-            val date = Date(timestamp)
-
-            // Define el formato de salida que será hh:mm:ss
-            val format = SimpleDateFormat("hh:mm:ss a", Locale.getDefault())
-
-            // Retorna la fecha formateada
-            format.format(date)
-        } catch (e: Exception) {
-            "Hora no disponible" // En caso de error
+    private fun moveToMemberLocation(index: Int) {
+        if (index < currentMarkers.size) {
+            val marker = currentMarkers[index]
+            if (marker != null) {
+                val coordinates = marker.position // Obtener la posición del marcador
+                Log.d(TAG, "Moviendo la cámara al marcador del miembro $index: $coordinates")
+                map.animateCamera(
+                    CameraUpdateFactory.newLatLngZoom(coordinates, 18f), // Zoom nivel 18
+                    3000, // Duración de la animación (2 segundos)
+                    null
+                )
+            } else {
+                Log.w(TAG, "El marcador para el miembro $index es nulo")
+            }
+        } else {
+            Log.e(TAG, "Índice fuera de límites: $index")
         }
     }
 
-    // Función para agregar el listener de ubicación para cada miembro
     private fun addLocationListener(index: Int, uid: String) {
         if (locationListeners[index] == null) {
             Log.d(TAG, "Agregando listener para el miembro $index")
             val postReference = database.child("users").child(uid)
             locationListeners[index] = object : ValueEventListener {
                 override fun onDataChange(dataSnapshot: DataSnapshot) {
-                    val latitud = dataSnapshot.child("latitud")
-                        .getValue(String::class.java)?.toDoubleOrNull()
-                    val longitud = dataSnapshot.child("longitud")
-                        .getValue(String::class.java)?.toDoubleOrNull()
+                    val latitud = dataSnapshot.child("latitud").getValue(String::class.java)?.toDoubleOrNull()
+                    val longitud = dataSnapshot.child("longitud").getValue(String::class.java)?.toDoubleOrNull()
 
                     Log.d(TAG, "Latitud y longitud del miembro $index: $latitud $longitud")
 
                     // Asegúrate de inicializar currentMarkers con un tamaño fijo o dinámico dependiendo del número de miembros
                     if (currentMarkers.size < 7) {
-                        currentMarkers =
-                            MutableList(7) { null } // Inicializa la lista con 7 elementos nulos
+                        currentMarkers = MutableList(7) { null } // Inicializa la lista con 7 elementos nulos
                     }
 
                     if (latitud != null && longitud != null) {
                         val coordinates = LatLng(latitud, longitud)
 
-                        // Verifica si el índice está dentro de los límites de la lista
-                        if (currentMarkers[index] != null) {
-                            Log.d(TAG, "Removiendo marker anterior para el miembro $index")
-                            currentMarkers[index]?.remove()
-                            currentMarkers[index] =
-                                null // Asegúrate de limpiar el valor después de remover el marker
-                        }
+                        // Remueve el marcador anterior si existe
+                        currentMarkers.getOrNull(index)?.remove()
 
+                        // Cargar la foto y crear el marcador cuando la imagen esté lista
+                        val photoUrl = urllist[index]
+                        if (!photoUrl.isNullOrEmpty()) {
+                            cargarFoto2(photoUrl, imageViewList[index]) { bitmap ->
+                                // Redimensionar el bitmap para el marcador si es necesario
+                                val resizedBitmap = resizeBitmap(bitmap, 120, 120)
 
-                        if (index < currentMarkers.size) {
-                            Log.d(TAG, "Agregando marker para el miembro $index")
-
+                                Log.d(TAG, "Agregando marker con imagen para el miembro $index")
+                                currentMarkers[index] = map.addMarker(
+                                    MarkerOptions()
+                                        .position(coordinates)
+                                        .title("Miembro ${index + 1}")
+                                        .icon(BitmapDescriptorFactory.fromBitmap(createCustomMarker(resizedBitmap)))
+                                        .flat(true)
+                                )
+                            }
+                        } else {
+                            // Si no hay foto, agregar un marcador con un icono predeterminado
                             currentMarkers[index] = map.addMarker(
-                                MarkerOptions().position(coordinates)
+                                MarkerOptions()
+                                    .position(coordinates)
                                     .title("Miembro ${index + 1}")
-                                    .icon(
-                                        BitmapDescriptorFactory.defaultMarker(
-                                            BitmapDescriptorFactory.HUE_AZURE
-                                        )
-                                    )
+                                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
                                     .flat(true)
                             )
-                        } else {
-                            Log.e(
-                                TAG,
-                                "Índice $index fuera de los límites de currentMarkers (size: ${currentMarkers.size})"
-                            )
                         }
-
+                    } else {
+                        Log.w(TAG, "Latitud o longitud nulas para el miembro $index")
                     }
                 }
 
@@ -266,32 +278,119 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
             postReference.addValueEventListener(locationListeners[index]!!)
         }
     }
-    private fun showMemberPopup(anchorView: View, miembro: String, fecha: String, hora: String) {
+    private fun resizeBitmap(bitmap: Bitmap, width: Int, height: Int): Bitmap {
+        return Bitmap.createScaledBitmap(bitmap, width, height, false)
+    }
+    private fun cargarFoto2(photoUrl: String, imageView: ImageView, onComplete: (Bitmap) -> Unit) {
+        val storageRef = FirebaseStorage.getInstance().getReferenceFromUrl(photoUrl)
+        val localFile = File.createTempFile("tempImage", "jpg")
+
+        storageRef.getFile(localFile).addOnSuccessListener {
+            val bitmap = BitmapFactory.decodeFile(localFile.absolutePath)
+            imageView.setImageBitmap(bitmap) // Actualiza el ImageView correspondiente
+
+            // Llama al callback después de que la imagen se haya descargado
+            onComplete(bitmap)
+        }.addOnFailureListener {
+            Log.e(TAG, "Error al cargar la imagen: ${it.message}")
+        }
+    }
+    // Función para crear un marcador personalizado
+    private fun createCustomMarker(bitmap: Bitmap): Bitmap {
+        val markerSize = 100 // Tamaño del marcador en píxeles
+        val markerBitmap = Bitmap.createBitmap(markerSize, markerSize, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(markerBitmap)
+        val paint = Paint()
+
+        // Dibuja el círculo de fondo del marker
+        paint.color = Color.WHITE
+        paint.isAntiAlias = true
+        canvas.drawCircle(
+            (markerSize / 2).toFloat(),
+            (markerSize / 2).toFloat(),
+            (markerSize / 2).toFloat(),
+            paint
+        )
+
+        // Recortar la imagen en forma circular
+        val roundedBitmap = Bitmap.createBitmap(markerSize, markerSize, Bitmap.Config.ARGB_8888)
+        val roundedCanvas = Canvas(roundedBitmap)
+        val path = Path()
+        path.addCircle(
+            (markerSize / 2).toFloat(),
+            (markerSize / 2).toFloat(),
+            (markerSize / 2).toFloat(),
+            Path.Direction.CCW
+        )
+        roundedCanvas.clipPath(path)
+
+        roundedCanvas.drawBitmap(
+            bitmap,
+            Rect(0, 0, bitmap.width, bitmap.height),
+            Rect(0, 0, markerSize, markerSize),
+            null
+        )
+
+        // Dibuja la imagen recortada en el centro del marcador
+        canvas.drawBitmap(roundedBitmap, 0f, 0f, null)
+
+        return markerBitmap
+    }
+    private fun cargarFoto(photoUrl: String, imageView: ImageView) {
+        val storageRef = FirebaseStorage.getInstance().getReferenceFromUrl(photoUrl)
+        val localFile = File.createTempFile("tempImage", "jpg")
+
+        storageRef.getFile(localFile).addOnSuccessListener {
+            val bitmap = BitmapFactory.decodeFile(localFile.absolutePath)
+            imageView.setImageBitmap(bitmap) // Actualiza el ImageView correspondiente
+        }.addOnFailureListener {
+            Log.e(TAG, "Error al cargar la imagen: ${it.message}")
+        }
+    }
+    private fun showMemberPopup(anchorView: View, miembro: String, fecha: String, hora: String, nombre: String) {
         // Inflar el diseño del popup
         val popupView = LayoutInflater.from(this).inflate(R.layout.popup_info, null)
 
-        // Crear el PopupWindow
+        popupView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
+        val popupWidth = popupView.measuredWidth
+        val popupHeight = popupView.measuredHeight
+
         val popupWindow = PopupWindow(
             popupView,
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            true // Permite que el popup se cierre al hacer clic fuera de él
+            popupWidth.coerceAtLeast(300), // Asegura un ancho mínimo
+            popupHeight,
+            true
         )
 
         // Configurar el contenido del popup
         val miembroText = popupView.findViewById<TextView>(R.id.miembro)
         val fechaText = popupView.findViewById<TextView>(R.id.fecha)
         val horaText = popupView.findViewById<TextView>(R.id.hora)
+        val nombreText = popupView.findViewById<TextView>(R.id.name)
 
         // Establecer el texto en los TextView
         miembroText.text = miembro
         fechaText.text = fecha
         horaText.text = hora
+        nombreText.text = nombre
 
         // Mostrar el PopupWindow cerca del ImageView
         popupWindow.showAsDropDown(anchorView, 0, -anchorView.height, Gravity.START)
     }
+    private fun convertirTimestamp(timestamp: Long): String {
+        return try {
+            // Crea una instancia de Date usando el timestamp en milisegundos
+            val date = Date(timestamp)
 
+            // Define el formato de salida que será hh:mm:ss
+            val format = SimpleDateFormat("hh:mm:ss a", Locale("es", "MX"))
+
+            // Retorna la fecha formateada
+            format.format(date)
+        } catch (e: Exception) {
+            "Hora no disponible" // En caso de error
+        }
+    }
     // Función para eliminar todos los listeners
     private fun removeListeners() {
         for (i in 0 until 7) {
@@ -314,17 +413,6 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
         map.mapType = mapType
         map.isTrafficEnabled = trafficEnabled
     }
-    private fun cargarFoto(photoUrl: String, imageView: ImageView) {
-        val storageRef = FirebaseStorage.getInstance().getReferenceFromUrl(photoUrl)
-        val localFile = File.createTempFile("tempImage", "jpg")
-
-        storageRef.getFile(localFile).addOnSuccessListener {
-            val bitmap = BitmapFactory.decodeFile(localFile.absolutePath)
-            imageView.setImageBitmap(bitmap) // Actualiza el ImageView correspondiente
-        }.addOnFailureListener {
-            Log.e(TAG, "Error al cargar la imagen: ${it.message}")
-        }
-    }
     ////////////////////////////////// COSAS QUE HACEN QUE FUNCIONE EL MAPA ///////////////////////////////////////////////
     private fun createFragment() {
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
@@ -332,7 +420,7 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
     }
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
-        enableLocation()
+        //enableLocation()
         //map.setOnMyLocationButtonClickListener(this)
         //map.setOnMyLocationClickListener(this)
         setupMap()

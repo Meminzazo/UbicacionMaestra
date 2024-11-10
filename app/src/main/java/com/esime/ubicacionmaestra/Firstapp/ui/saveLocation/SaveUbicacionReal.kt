@@ -9,7 +9,13 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.Rect
 import android.location.Location
 import android.os.Build
 import android.os.Bundle
@@ -22,9 +28,11 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ProgressBar
+import android.widget.RelativeLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.cardview.widget.CardView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -50,6 +58,7 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CircleOptions
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
@@ -97,6 +106,8 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
     private lateinit var geofenceContainer: LinearLayout
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private var uid: String? = null
+    private lateinit var vinetaDelictivo: androidx.cardview.widget.CardView
+    private lateinit var overlayView: View
 
     companion object {
         const val TAG = "SaveUbicacionReal" // Definimos la variable TAG aqui
@@ -138,7 +149,7 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         val btnIndice = findViewById<Button>(R.id.btn_indice_delictivo)
-        val vinetaDelictivo = findViewById<androidx.cardview.widget.CardView>(R.id.vineta_delictivo)
+        vinetaDelictivo = findViewById<androidx.cardview.widget.CardView>(R.id.vineta_delictivo)
         val speedView = findViewById<SpeedView>(R.id.termometro_delictivo)
         val btnMasInformacion = findViewById<Button>(R.id.btn_mas_informacion)
         val mainLayout = findViewById<ConstraintLayout>(R.id.constraintLayout)
@@ -149,6 +160,13 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         switchUbicacionReal.isChecked = sharedPrefs.getBoolean(SWITCH_STATE, false)
 
         btnIndice.setOnClickListener {
+            // Obtener referencia al ProgressBar
+            val progressBarCargando = findViewById<ProgressBar>(R.id.progressBarCargando)
+            overlayView = findViewById<View>(R.id.overlayView)
+            overlayView.visibility = View.VISIBLE
+            // Mostrar el ProgressBar mientras se cargan los datos
+            progressBarCargando.visibility = View.VISIBLE
+
             // Ocultar la viñeta inicialmente
             vinetaDelictivo.visibility = View.GONE
 
@@ -162,6 +180,10 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
                     lifecycleScope.launch(Dispatchers.IO) {
                         val (indiceDelictivo, _) = calcularIndiceDelictivo(latitud, longitud)
                         withContext(Dispatchers.Main) {
+                            // Ocultar el ProgressBar después de cargar los datos
+                            progressBarCargando.visibility = View.GONE
+                            overlayView.visibility = View.GONE
+                            // Mostrar la viñeta después de que se tengan los datos
                             vinetaDelictivo.visibility = View.VISIBLE
                             vinetaDelictivo.bringToFront()
 
@@ -172,42 +194,41 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
                             if (indiceDelictivo > 0) {
                                 Log.d(TAG, "Índice delictivo calculado: $indiceDelictivo")
                             } else {
+                                Toast.makeText(
+                                    this@SaveUbicacionReal,
+                                    "No hay delitos cercanos para mostrar",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                Toast.makeText(
+                                    this@SaveUbicacionReal,
+                                    "Nota: Función limitada a Ciudad de México",
+                                    Toast.LENGTH_LONG
+                                ).show()
                                 Log.w(TAG, "No se encontraron delitos cercanos para mostrar el índice.")
                             }
                         }
                     }
                 } else {
                     Log.w(TAG, "No se pudo obtener la ubicación del usuario.")
+                    progressBarCargando.visibility = View.GONE // Ocultar el ProgressBar si no se encuentra la ubicación
                 }
             }
         }
-        // Detectar toque fuera del CardView
-        mainLayout.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_DOWN) {
-                // Si el CardView está visible y el usuario toca fuera del CardView, se oculta
-                if (vinetaDelictivo.visibility == View.VISIBLE) {
-                    val cardViewLocation = IntArray(2)
-                    vinetaDelictivo.getLocationOnScreen(cardViewLocation)
-                    val x = event.rawX
-                    val y = event.rawY
 
-                    val left = cardViewLocation[0]
-                    val top = cardViewLocation[1]
-                    val right = left + vinetaDelictivo.width
-                    val bottom = top + vinetaDelictivo.height
-
-                    if (x < left || x > right || y < top || y > bottom) {
-                        vinetaDelictivo.visibility = View.GONE
-                        btnIndice.visibility = View.VISIBLE  // Restaurar visibilidad del botón
-                    }
-                }
-            }
-            false
-        }
 
         btnMasInformacion.setOnClickListener {
             // Verificar si la viñeta es visible antes de continuar
             if (vinetaDelictivo.visibility == View.VISIBLE) {
+
+                // Obtener referencia al ProgressBar
+                val progressBarCargando = findViewById<ProgressBar>(R.id.progressBarCargando)
+                overlayView = findViewById<View>(R.id.overlayView)
+                overlayView.visibility = View.VISIBLE
+                // Mostrar el ProgressBar mientras se cargan los datos
+                progressBarCargando.visibility = View.VISIBLE
+                // Ocultar la viñeta inicialmente
+                vinetaDelictivo.visibility = View.GONE
+
                 fusedLocationClient.lastLocation.addOnSuccessListener { location ->
                     if (location != null) {
                         val latitud = location.latitude
@@ -218,23 +239,37 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
                             val (_, delitosCercanos) = calcularIndiceDelictivo(latitud, longitud)
                             Log.d(TAG, "Delitos cercanos: $delitosCercanos")
                             withContext(Dispatchers.Main) {
+                                // Ocultar el ProgressBar después de obtener los datos
+                                progressBarCargando.visibility = View.GONE
+                                overlayView.visibility = View.GONE
+
                                 if (delitosCercanos.isNotEmpty()) {
-                                    val intent = Intent(this@SaveUbicacionReal, DetallesDelitosActivity::class.java).apply {  }
+                                    val intent = Intent(
+                                        this@SaveUbicacionReal,
+                                        DetallesDelitosActivity::class.java
+                                    ).apply { }
                                     intent.putExtra("delitosCercanos", ArrayList(delitosCercanos))
                                     startActivity(intent)
                                 } else {
                                     Log.w(TAG, "No hay delitos cercanos para mostrar.")
+                                    Toast.makeText(
+                                        this@SaveUbicacionReal,
+                                        "No hay delitos cercanos para mostrar",
+                                        Toast.LENGTH_LONG
+                                    ).show()
                                 }
                             }
                         }
                     } else {
                         Log.w(TAG, "No se pudo obtener la ubicación del usuario.")
+                        progressBarCargando.visibility = View.GONE // Ocultar ProgressBar si no se pudo obtener la ubicación
                     }
                 }
             } else {
                 Log.w(TAG, "La viñeta no es visible. El botón 'Más Información' no tiene acción.")
             }
         }
+
 
         ConfiButton.setOnClickListener {view ->
             showGeofenceDialog()
@@ -272,6 +307,11 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
             }
         }
     }
+    // Función para redimensionar un Bitmap
+    private fun resizeBitmap(resourceId: Int, width: Int, height: Int): Bitmap {
+        val bitmap = BitmapFactory.decodeResource(resources, resourceId)
+        return Bitmap.createScaledBitmap(bitmap, width, height, false)
+    }
     private fun removeAllGeofences() {
         geofencingClient.removeGeofences(getGeofencePendingIntent())
             .addOnSuccessListener {
@@ -282,7 +322,6 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
                 Log.e(TAG, "Error al eliminar geovallas: ${e.message}", e)
             }
     }
-
     private fun getGeofencePendingIntent(): PendingIntent {
         val intent = Intent(this, GeofenceBroadcastReceiver::class.java)
         return PendingIntent.getBroadcast(
@@ -295,7 +334,7 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
     private suspend fun calcularIndiceDelictivo(
         latitudUsuario: Double,
         longitudUsuario: Double,
-        radioKm: Double = 0.5
+        radioKm: Double = 0.7
     ): Pair<Int, List<Delito>> {
         return withContext(Dispatchers.IO) {
             var totalDelitos = 0.0
@@ -387,6 +426,9 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
 
         map.mapType = mapType
         map.isTrafficEnabled = trafficEnabled
+        map.setOnMapClickListener {
+            vinetaDelictivo.visibility = View.GONE
+        }
     }
     @SuppressLint("MissingPermission")
     private fun addGeofence(nombre: String?, latitud: Double?, longitud: Double?, radio: Float?) {
@@ -474,8 +516,51 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
             .strokeWidth(2f)
             .fillColor(0x40ff0000)
             .strokeColor(Color.BLUE)
-        map.addMarker(MarkerOptions().position(LatLng(latitud, longitud)).title(nombre))
+        val resizedBitmap = resizeBitmap(R.drawable.ic_geovalla, 120, 120)
+        map.addMarker(MarkerOptions().position(LatLng(latitud, longitud)).title(nombre).icon(
+            BitmapDescriptorFactory.fromBitmap(createCustomMarker(resizedBitmap))))
         map.addCircle(circleOptions)
+    }
+    // Función para crear un marcador personalizado
+    private fun createCustomMarker(bitmap: Bitmap): Bitmap {
+        val markerSize = 100 // Tamaño del marcador en píxeles
+        val markerBitmap = Bitmap.createBitmap(markerSize, markerSize, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(markerBitmap)
+        val paint = Paint()
+
+        // Dibuja el círculo de fondo del marker
+        paint.color = Color.WHITE
+        paint.isAntiAlias = true
+        canvas.drawCircle(
+            (markerSize / 2).toFloat(),
+            (markerSize / 2).toFloat(),
+            (markerSize / 2).toFloat(),
+            paint
+        )
+
+        // Recortar la imagen en forma circular
+        val roundedBitmap = Bitmap.createBitmap(markerSize, markerSize, Bitmap.Config.ARGB_8888)
+        val roundedCanvas = Canvas(roundedBitmap)
+        val path = Path()
+        path.addCircle(
+            (markerSize / 2).toFloat(),
+            (markerSize / 2).toFloat(),
+            (markerSize / 2).toFloat(),
+            Path.Direction.CCW
+        )
+        roundedCanvas.clipPath(path)
+
+        roundedCanvas.drawBitmap(
+            bitmap,
+            Rect(0, 0, bitmap.width, bitmap.height),
+            Rect(0, 0, markerSize, markerSize),
+            null
+        )
+
+        // Dibuja la imagen recortada en el centro del marcador
+        canvas.drawBitmap(roundedBitmap, 0f, 0f, null)
+
+        return markerBitmap
     }
     // Modificación de la función showGeofenceDialog() para abrir el mapa
     @SuppressLint("InflateParams")
@@ -521,8 +606,6 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         }
         dialog.show()
     }
-
-
     private fun addGeofenceFields(index: Int, container: LinearLayout) {
         val context = this
         // Texto para el nombre de la geovalla
@@ -611,6 +694,10 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         map.setOnMyLocationButtonClickListener(this)
         map.setOnMyLocationClickListener(this)
         consultaGeofence()
+        map.setOnMapClickListener {
+            vinetaDelictivo.visibility = View.GONE
+            overlayView.visibility = View.GONE
+        }
     }
     private fun isLocationPermissionGranted() = ContextCompat.checkSelfPermission(
         this,

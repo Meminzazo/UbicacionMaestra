@@ -14,6 +14,7 @@ import android.graphics.Rect
 import android.location.Location
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.ImageView
 import android.widget.Spinner
@@ -24,6 +25,8 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.esime.ubicacionmaestra.Firstapp.ui.consultGroup.ConsultGroupAcivity
+import com.esime.ubicacionmaestra.Firstapp.ui.consultGroup.ConsultGroupAcivity.Companion
 import com.esime.ubicacionmaestra.Firstapp.ui.home.MenuPrincipalActivity
 import com.esime.ubicacionmaestra.Firstapp.ui.profile.PerfilActivity
 import com.esime.ubicacionmaestra.R
@@ -193,31 +196,129 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
             }
 
 
-            // Cambio de estado del switch
             switchConsultar.setOnCheckedChangeListener { _, isChecked ->
+                val selectedName = spinnerUbi.selectedItem?.toString()
 
-                val selectedName = spinnerUbi.selectedItem.toString()
                 if (selectedName != null) {
-                    uidToConsult = nameUidMap[selectedName]  // Obtenemos el UID asociado al nombre
+                    uidToConsult = nameUidMap[selectedName] // Obtenemos el UID asociado al nombre
 
                     Log.i(TAG, "Nombre seleccionado: $selectedName con UID: $uidToConsult")
 
                     val docRef4 = db.collection("users").document(uidToConsult!!)
 
                     docRef4.get().addOnSuccessListener { document4 ->
-                        val PhotoUrl = document4.getString("photoUrl")
+                        val photoUrl = document4.getString("photoUrl")
 
-                        Log.i(TAG, "PhotoUrl: $PhotoUrl")
-                        if (PhotoUrl != null) {
-                            cargarFoto(PhotoUrl)
-                        }
-                        if (selectedName != null) {
-                            nombresubi.text = selectedName
-                            //nombre = selectedName
+                        Log.i(TAG, "PhotoUrl: $photoUrl")
+
+                        if (photoUrl != null) {
+                            cargarFoto2(photoUrl, photoPerfil) { bitmap ->
+                                if (isChecked) {
+                                    // Inicia la escucha de geovallas si no hay un listener activo
+                                    if (geofenceListener == null) {
+                                        val postReferenceGeofences =
+                                            database.child("users").child(uidToConsult!!).child("Geovallas")
+                                        geofenceListener = object : ValueEventListener {
+                                            override fun onDataChange(dataSnapshot: DataSnapshot) {
+                                                for (geovallaSnapshot in dataSnapshot.children) {
+                                                    val nombre = geovallaSnapshot.child("name")
+                                                        .getValue(String::class.java)
+                                                    val latitud = geovallaSnapshot.child("latitud")
+                                                        .getValue(String::class.java)?.toDoubleOrNull()
+                                                    val longitud = geovallaSnapshot.child("longitud")
+                                                        .getValue(String::class.java)?.toDoubleOrNull()
+                                                    val radio = geovallaSnapshot.child("radius")
+                                                        .getValue(String::class.java)?.toFloatOrNull()
+                                                    val transitionType = geovallaSnapshot.child("transitionTypes")
+                                                        .getValue(String::class.java)
+
+                                                    if (nombre != null && latitud != null && longitud != null && radio != null) {
+                                                        Log.i(
+                                                            TAG,
+                                                            "Geovalla: $nombre, Latitud: $latitud, Longitud: $longitud, Radio: $radio, Transition: $transitionType"
+                                                        )
+                                                        if (transitionType == "true") {
+                                                            val tranTT = "Dentro"
+                                                            Toast.makeText(
+                                                                this@ConsultAppR,
+                                                                "En la Geovalla: $nombre, el usuario esta: $tranTT",
+                                                                Toast.LENGTH_LONG
+                                                            ).show()
+                                                        }else{
+                                                            val tranTF = "Fuera"
+                                                            Toast.makeText(
+                                                                this@ConsultAppR,
+                                                                "En la Geovalla: $nombre, el usuario esta: $tranTF",
+                                                                Toast.LENGTH_SHORT
+                                                            ).show()
+                                                        }
+
+                                                    }
+                                                }
+                                            }
+
+                                            override fun onCancelled(databaseError: DatabaseError) {
+                                                Log.w(TAG, "loadPost:onCancelled", databaseError.toException())
+                                            }
+                                        }
+                                        postReferenceGeofences.addValueEventListener(geofenceListener!!)
+                                    }
+
+                                    // Inicia el listener de ubicación si no hay uno activo
+                                    if (locationListener == null) {
+                                        Log.i(TAG, "Listener de ubicación activado para UID: $uidToConsult")
+                                        val postReferenceLocation = database.child("users").child(uidToConsult!!)
+                                        locationListener = object : ValueEventListener {
+                                            override fun onDataChange(dataSnapshot: DataSnapshot) {
+                                                val latitud = dataSnapshot.child("latitud")
+                                                    .getValue(String::class.java)?.toDoubleOrNull()
+                                                val longitud = dataSnapshot.child("longitud")
+                                                    .getValue(String::class.java)?.toDoubleOrNull()
+                                                val date = dataSnapshot.child("date").getValue(String::class.java)
+                                                val hour = dataSnapshot.child("timestamp").getValue(Long::class.java)
+
+                                                val hourFormated = convertirTimestamp(hour!!)
+
+                                                if (latitud != null && longitud != null && date != null) {
+                                                    Log.i(TAG, "Latitud: $latitud, Longitud: $longitud")
+                                                    val coordinates = LatLng(latitud, longitud)
+                                                    dates.text = date
+                                                    hours.text = hourFormated
+
+                                                    currentMarker?.remove()
+
+                                                    // Crear el marcador personalizado
+                                                    val customMarkerBitmap = createCustomMarker(bitmap)
+
+                                                    currentMarker = map.addMarker(
+                                                        MarkerOptions().position(coordinates)
+                                                            .title(selectedName)
+                                                            .icon(BitmapDescriptorFactory.fromBitmap(customMarkerBitmap))
+                                                            .flat(true)
+                                                    )
+                                                    map.animateCamera(
+                                                        CameraUpdateFactory.newLatLngZoom(
+                                                            coordinates,
+                                                            18f
+                                                        ), 5000, null
+                                                    )
+                                                } else {
+                                                    Log.i(TAG, "Latitud y Longitud son nulos")
+                                                }
+                                            }
+
+                                            override fun onCancelled(databaseError: DatabaseError) {
+                                                Log.w(TAG, "loadPost:onCancelled", databaseError.toException())
+                                            }
+                                        }
+                                        postReferenceLocation.addValueEventListener(locationListener!!)
+                                    }
+                                }
+                            }
                         }
                     }
-                    if (uidToConsult!!.isEmpty()) {
 
+                    if (uidToConsult!!.isEmpty()) {
                         Toast.makeText(
                             this,
                             "Ingresa una dirección de correo válida",
@@ -225,187 +326,48 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                         ).show()
                         currentMarker?.remove()
                         switchConsultar.isChecked = false
-
-
-                    } else {
-                        // Aquí se activa el listener cuando el switch está activado
-                        if (isChecked) {
-                            // Inicia la escucha de geovallas si no hay un listener activo
-                            if (geofenceListener == null) {
-                                val postReference =
-                                    database.child("users").child(uidToConsult!!).child("Geovallas")
-                                geofenceListener = object : ValueEventListener {
-                                    override fun onDataChange(dataSnapshot: DataSnapshot) {
-                                        for (geovallaSnapshot in dataSnapshot.children) {
-                                            val nombre = geovallaSnapshot.child("name")
-                                                .getValue(String::class.java)
-                                            val latitud = geovallaSnapshot.child("latitud")
-                                                .getValue(String::class.java)?.toDoubleOrNull()
-                                            val longitud = geovallaSnapshot.child("longitud")
-                                                .getValue(String::class.java)?.toDoubleOrNull()
-                                            val radio = geovallaSnapshot.child("radius")
-                                                .getValue(String::class.java)?.toFloatOrNull()
-                                            val transitionType =
-                                                geovallaSnapshot.child("transitionTypes")
-                                                    .getValue(String::class.java)
-
-                                            if (nombre != null && latitud != null && longitud != null && radio != null) {
-                                                Log.i(
-                                                    TAG,
-                                                    "Geovalla: $nombre, Latitud: $latitud, Longitud: $longitud, Radio: $radio, Transition: $transitionType"
-                                                )
-                                                //mostrarGeovalla(nombre, latitud, longitud, radio)
-                                                Toast.makeText(
-                                                    this@ConsultAppR,
-                                                    "Geovalla: $nombre, Tipo de Transición: $transitionType",
-                                                    Toast.LENGTH_LONG
-                                                ).show()
-                                            }
-                                        }
-                                    }
-
-                                    override fun onCancelled(databaseError: DatabaseError) {
-                                        Log.w(
-                                            TAG,
-                                            "loadPost:onCancelled",
-                                            databaseError.toException()
-                                        )
-                                    }
-                                }
-                                postReference.addValueEventListener(geofenceListener!!)
-                            }
-
-                            if (locationListener == null) {
-                                Log.i(
-                                    TAG,
-                                    "Si funciona el listener de ubicación con el ID: $uidToConsult"
-                                )
-                                val postReference1 = database.child("users").child(uidToConsult!!)
-                                locationListener = object : ValueEventListener {
-                                    override fun onDataChange(dataSnapshot: DataSnapshot) {
-                                        val latitud = dataSnapshot.child("latitud")
-                                            .getValue(String::class.java)?.toDoubleOrNull()
-                                        val longitud = dataSnapshot.child("longitud")
-                                            .getValue(String::class.java)?.toDoubleOrNull()
-                                        val date = dataSnapshot.child("date")
-                                            .getValue(String::class.java)
-                                        val hour = dataSnapshot.child("timestamp")
-                                            .getValue(Long::class.java)
-
-                                        val hourFormated = convertirTimestamp(hour!!)
-
-                                        if (latitud != null && longitud != null && date != null) {
-                                            Log.i(TAG, "Latitud: $latitud, Longitud: $longitud")
-                                            val coordinates = LatLng(latitud, longitud)
-                                            dates.text = date
-                                            hours.text = hourFormated
-                                            currentMarker?.remove()
-
-                                            currentMarker = map.addMarker(
-                                                MarkerOptions().position(coordinates)
-                                                    .title(selectedName)
-                                                    .icon(
-                                                        BitmapDescriptorFactory.defaultMarker(
-                                                            BitmapDescriptorFactory.HUE_AZURE
-                                                        )
-                                                    ).flat(true)
-                                            )
-                                            map.animateCamera(
-                                                CameraUpdateFactory.newLatLngZoom(
-                                                    coordinates,
-                                                    18f
-                                                ), 5000, null
-                                            )
-                                        } else {
-                                            Log.i(TAG, "Latitud y Longitud son nulos")
-                                        }
-                                    }
-
-                                    override fun onCancelled(databaseError: DatabaseError) {
-                                        Log.w(
-                                            TAG,
-                                            "loadPost:onCancelled",
-                                            databaseError.toException()
-                                        )
-                                    }
-                                }
-                                postReference1.addValueEventListener(locationListener!!)
-                            } else {
-                                Log.i(TAG, "No funciona el listener de ubicación")
-                            }
-
-
-                        } else {
-                            // Si el switch está apagado, elimina los listeners
-                            geofenceListener?.let { listener ->
-                                database.child("users").child(uidToConsult!!).child("Geovallas")
-                                    .removeEventListener(listener)
-                                geofenceListener = null
-                            }
-
-                            locationListener?.let { listener ->
-                                database.child(uidToConsult!!).removeEventListener(listener)
-                                locationListener = null
-                            }
-
-                            currentMarker?.remove()
-                            switchConsultar.isChecked = false
+                    } else if (!isChecked) {
+                        // Si el switch está apagado, elimina los listeners
+                        geofenceListener?.let { listener ->
+                            database.child("users").child(uidToConsult!!).child("Geovallas")
+                                .removeEventListener(listener)
+                            geofenceListener = null
                         }
 
-
+                        locationListener?.let { listener ->
+                            database.child("users").child(uidToConsult!!).removeEventListener(listener)
+                            locationListener = null
+                        }
+                        currentMarker?.remove()
+                        switchConsultar.isChecked = false
                     }
                 } else {
                     Toast.makeText(this, "Seleccione un usuario", Toast.LENGTH_SHORT).show()
                 }
             }
 
+
+
         }
     }
 
-    private fun convertirTimestamp(timestamp: Long): String {
-        return try {
-            // Crea una instancia de Date usando el timestamp en milisegundos
-            val date = Date(timestamp)
-
-            // Define el formato de salida que será hh:mm:ss
-            val format = SimpleDateFormat("hh:mm:ss a", Locale.getDefault())
-
-            // Retorna la fecha formateada
-            format.format(date)
-        } catch (e: Exception) {
-            "Hora no disponible" // En caso de error
-        }
-    }
-
-    @SuppressLint("MissingSuperCall")
-    override fun onBackPressed() {
-        finish() // Cierra la Activity
-    }
-
-    private fun setupMap() {
-        val sharedPreferences = getSharedPreferences("MapSettings", Context.MODE_PRIVATE)
-        val mapType = sharedPreferences.getInt("map_type", GoogleMap.MAP_TYPE_NORMAL)
-        val trafficEnabled = sharedPreferences.getBoolean("traffic_enabled", false)
-
-        map.mapType = mapType
-        map.isTrafficEnabled = trafficEnabled
-    }
-
-    private fun cargarFoto(photoUrl: String) {
+    private fun cargarFoto2(photoUrl: String, imageView: ImageView, onComplete: (Bitmap) -> Unit) {
         val storageRef = FirebaseStorage.getInstance().getReferenceFromUrl(photoUrl)
         val localFile = File.createTempFile("tempImage", "jpg")
 
         storageRef.getFile(localFile).addOnSuccessListener {
-            bitmap = BitmapFactory.decodeFile(localFile.absolutePath) // Actualiza el bitmap global
-            photoPerfil.setImageBitmap(bitmap)
+            val bitmap = BitmapFactory.decodeFile(localFile.absolutePath)
+            imageView.setImageBitmap(bitmap) // Actualiza el ImageView correspondiente
+
+            // Llama al callback después de que la imagen se haya descargado
+            onComplete(bitmap)
         }.addOnFailureListener {
-            Log.e(PerfilActivity.TAG, "Error al cargar la imagen: ${it.message}")
+            Log.e(ConsultGroupAcivity.TAG, "Error al cargar la imagen: ${it.message}")
         }
     }
-
     // Función para crear un marcador personalizado
     private fun createCustomMarker(bitmap: Bitmap): Bitmap {
-        val markerSize = 120 // Tamaño del marcador en píxeles
+        val markerSize = 100 // Tamaño del marcador en píxeles
         val markerBitmap = Bitmap.createBitmap(markerSize, markerSize, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(markerBitmap)
         val paint = Paint()
@@ -444,6 +406,34 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
 
         return markerBitmap
     }
+    private fun convertirTimestamp(timestamp: Long): String {
+        return try {
+            // Crea una instancia de Date usando el timestamp en milisegundos
+            val date = Date(timestamp)
+
+            // Define el formato de salida que será hh:mm:ss
+            val format = SimpleDateFormat("hh:mm:ss a", Locale.getDefault())
+
+            // Retorna la fecha formateada
+            format.format(date)
+        } catch (e: Exception) {
+            "Hora no disponible" // En caso de error
+        }
+    }
+
+    @SuppressLint("MissingSuperCall")
+    override fun onBackPressed() {
+        finish() // Cierra la Activity
+    }
+
+    private fun setupMap() {
+        val sharedPreferences = getSharedPreferences("MapSettings", Context.MODE_PRIVATE)
+        val mapType = sharedPreferences.getInt("map_type", GoogleMap.MAP_TYPE_NORMAL)
+        val trafficEnabled = sharedPreferences.getBoolean("traffic_enabled", false)
+
+        map.mapType = mapType
+        map.isTrafficEnabled = trafficEnabled
+    }
 
     ////////////////////////////////// COSAS QUE HACEN QUE FUNCIONE EL MAPA ///////////////////////////////////////////////
     private fun createFragment() {
@@ -460,7 +450,7 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
         setupMap()
         val mexicoCity = LatLng(19.432608, -99.133209)
         map.moveCamera(
-            com.google.android.gms.maps.CameraUpdateFactory.newLatLngZoom(
+            CameraUpdateFactory.newLatLngZoom(
                 mexicoCity,
                 5f
             )
@@ -500,7 +490,11 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                 Log.e(TAG, "Error getting data", it)
             }
     }
-
+    // Función para redimensionar un Bitmap
+    private fun resizeBitmap(resourceId: Int, width: Int, height: Int): Bitmap {
+        val bitmap = BitmapFactory.decodeResource(resources, resourceId)
+        return Bitmap.createScaledBitmap(bitmap, width, height, false)
+    }
 
     private fun mostrarGeovalla(
         nombre: String?,
@@ -514,7 +508,8 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
             .strokeWidth(2f)
             .fillColor(0x40ff0000)
             .strokeColor(Color.BLUE)
-        map.addMarker(MarkerOptions().position(LatLng(latitud, longitud)).title(nombre))
+        val resizedBitmap = resizeBitmap(R.drawable.ic_geovalla, 120, 120)
+        map.addMarker(MarkerOptions().position(LatLng(latitud, longitud)).title(nombre).icon(BitmapDescriptorFactory.fromBitmap(createCustomMarker(resizedBitmap))))
         map.addCircle(circleOptions)
     }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
