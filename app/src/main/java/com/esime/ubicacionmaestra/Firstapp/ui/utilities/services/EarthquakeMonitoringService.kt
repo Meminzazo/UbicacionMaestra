@@ -11,6 +11,7 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Build
 import android.os.IBinder
+import android.os.Looper
 import android.util.Log
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.app.ActivityCompat
@@ -19,7 +20,11 @@ import androidx.core.app.NotificationManagerCompat
 import com.esime.ubicacionmaestra.Firstapp.ui.panic.panicBttonActivity
 import com.esime.ubicacionmaestra.R
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -63,14 +68,13 @@ class EarthquakeMonitoringService : Service() {
         Log.d(TAG, "Servicio de monitoreo de sismos iniciado")
         startForegroundNotification()
 
-        // Iniciar la tarea en segundo plano para obtener datos de sismos simulados
-        serviceJob = serviceScope.launch {
-            fetchEarthquakeData()
-        }
+        // Iniciar las actualizaciones de ubicación
+        startLocationUpdates()
 
         // Devolver START_STICKY para mantener el servicio corriendo en segundo plano
         return START_STICKY
     }
+
 
     // Método onBind (para completar los métodos abstractos de la clase Service)
     override fun onBind(intent: Intent?): IBinder? {
@@ -80,14 +84,16 @@ class EarthquakeMonitoringService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         serviceJob?.cancel() // Cancelar cualquier tarea en segundo plano para evitar fugas de memoria
+        Log.d(TAG, "Servicio de monitoreo de sismos detenido")
+        stopLocationUpdates(object : LocationCallback() {})
     }
 
-    private suspend fun fetchEarthquakeData() {
+    private suspend fun fetchEarthquakeData(userLat: Double, userLng: Double) {
         try {
             val response = earthquakeApi.getRecentEarthquakes()
             if (response.isSuccessful) {
                 val earthquakes = response.body()?.features ?: emptyList()
-                checkIfEarthquakeNearby(earthquakes)
+                checkIfEarthquakeNearby(earthquakes, userLat, userLng)
             } else {
                 Log.e(TAG, "Error en la respuesta: ${response.message()}")
             }
@@ -97,32 +103,26 @@ class EarthquakeMonitoringService : Service() {
     }
 
     @SuppressLint("MissingPermission")
-    private fun checkIfEarthquakeNearby(earthquakes: List<EarthquakeApiService.EarthquakeFeature>) {
-        // Verificar permisos antes de acceder a la ubicación
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
-            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+    private fun checkIfEarthquakeNearby(earthquakes: List<EarthquakeApiService.EarthquakeFeature>, userLat: Double, userLng: Double) {
+        val currentTime = System.currentTimeMillis() // Hora actual en milisegundos
+        val fiveMinutesInMillis = 5 * 60 * 1000 // Cinco minutos en milisegundos
 
-            fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
-                if (location != null) {
-                    earthquakes.forEach { earthquake ->
-                        val lat = earthquake.geometry.coordinates[1]
-                        val lng = earthquake.geometry.coordinates[0]
+        earthquakes.forEach { earthquake ->
+            val earthquakeTime = earthquake.properties.time // Tiempo del terremoto en milisegundos
+            val lat = earthquake.geometry.coordinates[1]
+            val lng = earthquake.geometry.coordinates[0]
 
-                        // Calcular la distancia entre el terremoto y la ubicación del usuario
-                        val distance = calculateDistance(location.latitude, location.longitude, lat, lng)
+            // Calcular la distancia entre el terremoto y la ubicación del usuario
+            val distance = calculateDistance(userLat, userLng, lat, lng)
 
-                        // Filtrar por magnitud y distancia
-                        if (earthquake.properties.mag >= 4.0 && distance <= 100) { // Si el terremoto está a menos de 100 km y tiene magnitud >= 4.0
-                            notifyUser(earthquake)  // Notificar al usuario
-                            startLocationService()  // Iniciar el servicio de guardado de ubicación
-                        }
-                    }
-                } else {
-                    Log.e(TAG, "No se pudo obtener la ubicación del usuario")
-                }
+            // Filtrar por magnitud, distancia y tiempo
+            if (earthquake.properties.mag >= 6.0 &&
+                distance <= 100 && // Distancia máxima de 100 km
+                currentTime - earthquakeTime <= fiveMinutesInMillis // Terremotos de los últimos 5 minutos
+            ) {
+                Log.d(TAG, "Sismo detectado cerca de ti: ${earthquake.properties.place}")
+                notifyUser(earthquake) // Notificar al usuario
             }
-        } else {
-            Log.e(TAG, "Permisos de ubicación no concedidos")
         }
     }
 
@@ -156,7 +156,14 @@ class EarthquakeMonitoringService : Service() {
             putExtra("magnitude", earthquake.properties.mag)
             putExtra("place", earthquake.properties.place)
         }
-        val pendingIntent: PendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT)
+
+        // Añadir FLAG_IMMUTABLE al PendingIntent
+        val pendingIntent: PendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            intent,
+            PendingIntent.FLAG_IMMUTABLE // Cambiado aquí
+        )
 
         val notification = NotificationCompat.Builder(this, "EarthquakeChannel")
             .setSmallIcon(R.drawable.ic_launcher_background)
@@ -169,6 +176,7 @@ class EarthquakeMonitoringService : Service() {
 
         NotificationManagerCompat.from(this).notify(1, notification)
     }
+
 
     // Crear el canal de notificaciones para el servicio
     private fun createNotificationChannel() {
@@ -194,5 +202,38 @@ class EarthquakeMonitoringService : Service() {
 
         startForeground(1, notification)
     }
+    @SuppressLint("MissingPermission")
+    private fun startLocationUpdates() {
+        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 600000) // Cada 10 segundos
+            .setMinUpdateIntervalMillis(300000) // Mínimo 5 segundos entre actualizaciones
+            .setMaxUpdates(100) // Sin límite de actualizaciones
+            .build()
+
+        val locationCallback = object : LocationCallback() {
+            override fun onLocationResult(locationResult: LocationResult) {
+                super.onLocationResult(locationResult)
+                val currentLocation = locationResult.lastLocation
+                if (currentLocation != null) {
+                    Log.d(TAG, "Nueva ubicación: ${currentLocation.latitude}, ${currentLocation.longitude}")
+
+                    // Llamar a fetchEarthquakeData dentro de una corrutina
+                    serviceScope.launch {
+                        fetchEarthquakeData(currentLocation.latitude, currentLocation.longitude)
+                    }
+                } else {
+                    Log.e(TAG, "No se pudo obtener la ubicación en la actualización.")
+                }
+            }
+        }
+
+        // Comienza a recibir actualizaciones de ubicación
+        fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
+    }
+
+
+    private fun stopLocationUpdates(locationCallback: LocationCallback) {
+        fusedLocationClient.removeLocationUpdates(locationCallback)
+    }
+
 }
 
