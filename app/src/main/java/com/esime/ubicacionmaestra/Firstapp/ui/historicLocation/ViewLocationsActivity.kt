@@ -52,6 +52,7 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
     private var emailCon: String? = null
 
     private lateinit var bitmap: Bitmap // Declaración global del bitmap
+    private lateinit var selectDates: TextView
 
     // Definimos la instancia de FirebaseFirestore para acceder a la base de datos Firestore
     private val db = FirebaseFirestore.getInstance()
@@ -79,7 +80,7 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
         var grupoID: String? = null
         val docRefHis = db.collection("users").document(uid!!)
         val emailsList = mutableListOf<String>()
-
+        selectDates = findViewById(R.id.selectDate)
         val uidList = mutableListOf<String>()
 
         val nameUidMap = mutableMapOf<String, String>()  // Para ligar nombres con UIDs
@@ -150,8 +151,10 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
 
                 val selectedName = spinnerHisUbi.selectedItem.toString()
                 if (selectedName.isBlank() || selectedName.isEmpty()) {
+                    map.clear()
                     Toast.makeText(this, "Seleccione un nombre", Toast.LENGTH_LONG).show()
                 } else {
+                    map.clear()
                     val emailUbiHist =
                         nameUidMap[selectedName]  // Obtenemos el UID asociado al nombre
 
@@ -236,7 +239,6 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
                 val displayDate = displayDateFormat.format(calendarSelected.time)
 
                 // Actualiza la vista con el formato deseado
-                val selectDates = findViewById<TextView>(R.id.selectDate)
                 selectDates.text = displayDate
 
                 // Carga las ubicaciones usando el formato para búsqueda
@@ -264,7 +266,9 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
             .get()
             .addOnSuccessListener { documents ->
                 if (documents.isEmpty) {
+                    Toast.makeText(this, "No se encontraron datos de la fecha seleccionada", Toast.LENGTH_LONG).show()
                     Log.d(TAG, "No se encontraron documentos para la fecha: $date")
+                    selectDates.text = "00/00/0000"
                     return@addOnSuccessListener
                 } else {
                     val FotoPerfil = findViewById<ImageView>(R.id.PhotoPerfil)

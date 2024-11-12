@@ -423,6 +423,7 @@ class ConsultGroupAcivity : AppCompatActivity(), OnMapReadyCallback,
         //enableLocation()
         //map.setOnMyLocationButtonClickListener(this)
         //map.setOnMyLocationClickListener(this)
+        map.uiSettings.isZoomControlsEnabled = true
         setupMap()
         val mexicoCity = LatLng(19.432608, -99.133209)
         map.moveCamera(com.google.android.gms.maps.CameraUpdateFactory.newLatLngZoom(mexicoCity, 5f))

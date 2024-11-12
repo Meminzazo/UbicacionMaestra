@@ -694,6 +694,7 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         map = googleMap
         enableLocation()
         setupMap()
+        map.uiSettings.isZoomControlsEnabled = true
         val mexicoCity = LatLng(19.432608, -99.133209)
         map.moveCamera(CameraUpdateFactory.newLatLngZoom(mexicoCity, 5f))
         map.setOnMyLocationButtonClickListener(this)
