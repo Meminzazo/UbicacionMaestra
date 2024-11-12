@@ -32,6 +32,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMyLocat
     private var geofenceRadius: Float = 100f
     private var geofenceCircle: Circle? = null
     private lateinit var placesClient: PlacesClient
+    companion object {
+        private const val TAG = "MapActivity"
+    }
 
     @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -143,6 +146,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMyLocat
     }
 
     override fun onMyLocationClick(p0: Location) {
-        TODO("Not yet implemented")
+        Log.d(TAG,"onMyLocationClick: $p0")
     }
 }

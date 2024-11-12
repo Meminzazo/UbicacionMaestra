@@ -120,6 +120,7 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
     }
 
     private lateinit var database: DatabaseReference
+    private lateinit var denunciasdatabase: DatabaseReference
     private lateinit var batteryMapReceiver: BatteryMapReceiver
     private lateinit var geofencingClient: GeofencingClient
 
@@ -145,14 +146,13 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         val batteryStatusIntentFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
         registerReceiver(batteryMapReceiver, batteryStatusIntentFilter)
 
-        database = FirebaseDatabase.getInstance().reference.child("denuncias")
+        denunciasdatabase = FirebaseDatabase.getInstance().reference.child("denuncias")
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         val btnIndice = findViewById<Button>(R.id.btn_indice_delictivo)
         vinetaDelictivo = findViewById<androidx.cardview.widget.CardView>(R.id.vineta_delictivo)
         val speedView = findViewById<SpeedView>(R.id.termometro_delictivo)
         val btnMasInformacion = findViewById<Button>(R.id.btn_mas_informacion)
-        val mainLayout = findViewById<ConstraintLayout>(R.id.constraintLayout)
         val ConfiButton = findViewById<Button>(R.id.AjustesButton)
         val switchUbicacionReal = findViewById<SwitchMaterial>(R.id.UbicacionReal) as SwitchMaterial
         val sharedPrefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -346,7 +346,7 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
             val longitudMin = longitudUsuario - kmToLongitudeDegrees(radioKm, latitudUsuario)
             val longitudMax = longitudUsuario + kmToLongitudeDegrees(radioKm, latitudUsuario)
 
-            val query = database.orderByChild("latitud").startAt(latitudMin).endAt(latitudMax)
+            val query = denunciasdatabase.orderByChild("latitud").startAt(latitudMin).endAt(latitudMax)
             val snapshot = query.get().await()
 
             if (snapshot.exists()) {
@@ -679,7 +679,12 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
     fun writeNewUser(name: String, latitud: String, longitud: String, radius: String) {
         database = Firebase.database.reference
         val user = User(name, latitud, longitud, radius)
-        database.child("users").child(uid!!).child("Geovallas").child(name).setValue(user)
+        if (name != "" && latitud != null && longitud != null && radius != null) {
+            database.child("users").child(uid!!).child("Geovallas").child(name).setValue(user)
+        }else{
+            Toast.makeText(this, "Error al guardar geovalla, intente de nuevo y verifique los datos", Toast.LENGTH_SHORT).show()
+            Log.e(TAG, "Error al guardar geovalla")
+        }
     }
     private fun createFragment(){
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
