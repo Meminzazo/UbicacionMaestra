@@ -150,7 +150,7 @@ class ViewLocationsActivity : AppCompatActivity(), OnMapReadyCallback {
             selectDateButton.setOnClickListener {   // Cuando se hace click en el boton de la seleccion de fecha
 
                 val selectedName = spinnerHisUbi.selectedItem.toString()
-                if (selectedName.isBlank() || selectedName.isEmpty()) {
+                if (selectedName.isNullOrEmpty()) {
                     map.clear()
                     Toast.makeText(this, "Seleccione un nombre", Toast.LENGTH_LONG).show()
                 } else {
