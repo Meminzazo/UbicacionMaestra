@@ -84,7 +84,7 @@
 
         <activity
             android:name=".Firstapp.ui.consult1To1.ConsultAppR"
-            android:exported="false" />
+            android:exported="true" />
         <activity
             android:name=".Firstapp.ui.saveLocation.SaveUbicacionReal"
             android:exported="false" />

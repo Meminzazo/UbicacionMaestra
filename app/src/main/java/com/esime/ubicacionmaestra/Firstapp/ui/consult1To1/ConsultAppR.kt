@@ -76,8 +76,6 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
     private lateinit var nombresubi: TextView
     private lateinit var dates: TextView
     private lateinit var hours: TextView
-    // Mapa para almacenar el estado anterior de las geovallas
-    private val estadoAnteriorGeovallas = mutableMapOf<String, String>()
 
     private var uid: String? = null
     private var uidToConsult: String? = null
@@ -106,7 +104,6 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
         setContentView(R.layout.activity_consult_app_r)
         supportActionBar?.hide()
 
-
         // Obtener el email del intent
         val bundle = intent.extras
         //emailPropio = bundle?.getString("Email")
@@ -128,6 +125,7 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
         photoPerfil = findViewById(R.id.photoPerfil)
         dates = findViewById(R.id.date)
         hours = findViewById(R.id.hour)
+        Log.d(TAG, "onCreate")
 
         // El mapa
         createFragment()
@@ -202,9 +200,7 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                 val selectedName = spinnerUbi.selectedItem?.toString()
 
                 if (selectedName != null) {
-
                     uidToConsult = nameUidMap[selectedName] // Obtenemos el UID asociado al nombre
-                    nombresubi.text = selectedName
 
                     Log.i(TAG, "Nombre seleccionado: $selectedName con UID: $uidToConsult")
 
@@ -218,7 +214,6 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                         if (photoUrl != null) {
                             cargarFoto2(photoUrl, photoPerfil) { bitmap ->
                                 if (isChecked) {
-                                    consultaGeofence()
                                     // Inicia la escucha de geovallas si no hay un listener activo
                                     if (geofenceListener == null) {
                                         val postReferenceGeofences =
@@ -226,34 +221,38 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                                         geofenceListener = object : ValueEventListener {
                                             override fun onDataChange(dataSnapshot: DataSnapshot) {
                                                 for (geovallaSnapshot in dataSnapshot.children) {
-                                                    val nombre = geovallaSnapshot.child("name").getValue(String::class.java)
-                                                    val latitud = geovallaSnapshot.child("latitud").getValue(String::class.java)?.toDoubleOrNull()
-                                                    val longitud = geovallaSnapshot.child("longitud").getValue(String::class.java)?.toDoubleOrNull()
-                                                    val radio = geovallaSnapshot.child("radius").getValue(String::class.java)?.toFloatOrNull()
-                                                    val transitionType = geovallaSnapshot.child("transitionTypes").getValue(String::class.java)
+                                                    val nombre = geovallaSnapshot.child("name")
+                                                        .getValue(String::class.java)
+                                                    val latitud = geovallaSnapshot.child("latitud")
+                                                        .getValue(String::class.java)?.toDoubleOrNull()
+                                                    val longitud = geovallaSnapshot.child("longitud")
+                                                        .getValue(String::class.java)?.toDoubleOrNull()
+                                                    val radio = geovallaSnapshot.child("radius")
+                                                        .getValue(String::class.java)?.toFloatOrNull()
+                                                    val transitionType = geovallaSnapshot.child("transitionTypes")
+                                                        .getValue(String::class.java)
 
                                                     if (nombre != null && latitud != null && longitud != null && radio != null) {
                                                         Log.i(
                                                             TAG,
                                                             "Geovalla: $nombre, Latitud: $latitud, Longitud: $longitud, Radio: $radio, Transition: $transitionType"
                                                         )
-
-                                                        // Determinar el estado actual
-                                                        val estadoActual = if (transitionType == "true") "Dentro" else "Fuera"
-
-                                                        // Verificar si hay un cambio de estado
-                                                        val estadoAnterior = estadoAnteriorGeovallas[nombre]
-                                                        if (estadoAnterior != estadoActual) {
-                                                            // Actualizar el estado en el mapa
-                                                            estadoAnteriorGeovallas[nombre] = estadoActual
-
-                                                            // Mostrar el Toast solo si hay cambio
+                                                        if (transitionType == "true") {
+                                                            val tranTT = "Dentro"
                                                             Toast.makeText(
                                                                 this@ConsultAppR,
-                                                                "En la Geovalla: $nombre, el usuario está: $estadoActual",
+                                                                "En la Geovalla: $nombre, el usuario esta: $tranTT",
                                                                 Toast.LENGTH_LONG
                                                             ).show()
+                                                        }else{
+                                                            val tranTF = "Fuera"
+                                                            Toast.makeText(
+                                                                this@ConsultAppR,
+                                                                "En la Geovalla: $nombre, el usuario esta: $tranTF",
+                                                                Toast.LENGTH_SHORT
+                                                            ).show()
                                                         }
+
                                                     }
                                                 }
                                             }
@@ -277,6 +276,7 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                                                     .getValue(String::class.java)?.toDoubleOrNull()
                                                 val date = dataSnapshot.child("date").getValue(String::class.java)
                                                 val hour = dataSnapshot.child("timestamp").getValue(Long::class.java)
+                                                val name = dataSnapshot.child("Nombre").getValue(String::class.java)
 
                                                 val hourFormated = convertirTimestamp(hour!!)
 
@@ -285,6 +285,7 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                                                     val coordinates = LatLng(latitud, longitud)
                                                     dates.text = date
                                                     hours.text = hourFormated
+                                                    nombresubi.text = name
 
                                                     currentMarker?.remove()
 
@@ -314,8 +315,6 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                                         }
                                         postReferenceLocation.addValueEventListener(locationListener!!)
                                     }
-                                }else{
-                                    map.clear()
                                 }
                             }
                         }
@@ -352,23 +351,6 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
 
 
         }
-    }
-    private fun mostrarGeovalla(
-        nombre: String?,
-        latitud: Double?,
-        longitud: Double?,
-        radio: Float?
-    ) {
-        //map.clear()
-        val circleOptions = CircleOptions()
-            .center(LatLng(latitud!!, longitud!!))
-            .radius(radio!!.toDouble())
-            .strokeWidth(2f)
-            .fillColor(0x40ff0000)
-            .strokeColor(Color.BLUE)
-        val resizedBitmap = resizeBitmap(R.drawable.ic_geovalla, 100, 100)
-        map.addMarker(MarkerOptions().position(LatLng(latitud, longitud)).title(nombre).icon(BitmapDescriptorFactory.fromBitmap(createCustomMarker(resizedBitmap))))
-        map.addCircle(circleOptions)
     }
 
     private fun cargarFoto2(photoUrl: String, imageView: ImageView, onComplete: (Bitmap) -> Unit) {
@@ -475,12 +457,13 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
                 5f
             )
         )
+        consultaGeofence()
     }
 
     private fun consultaGeofence() {
         val mDatabase = Firebase.database.reference
-        Log.d(TAG, "UID: $uidToConsult")
-        mDatabase.child("users").child(uidToConsult!!).child("Geovallas").get()
+        Log.d(TAG, "UID: $uid")
+        mDatabase.child("users").child(uid!!).child("Geovallas").get()
             .addOnSuccessListener { snapshot ->
                 snapshot.children.forEach { geovalla ->
                     val latitud =
@@ -515,7 +498,22 @@ class ConsultAppR : AppCompatActivity(), OnMapReadyCallback,
         return Bitmap.createScaledBitmap(bitmap, width, height, false)
     }
 
-
+    private fun mostrarGeovalla(
+        nombre: String?,
+        latitud: Double?,
+        longitud: Double?,
+        radio: Float?
+    ) {
+        val circleOptions = CircleOptions()
+            .center(LatLng(latitud!!, longitud!!))
+            .radius(radio!!.toDouble())
+            .strokeWidth(2f)
+            .fillColor(0x40ff0000)
+            .strokeColor(Color.BLUE)
+        val resizedBitmap = resizeBitmap(R.drawable.ic_geovalla, 120, 120)
+        map.addMarker(MarkerOptions().position(LatLng(latitud, longitud)).title(nombre).icon(BitmapDescriptorFactory.fromBitmap(createCustomMarker(resizedBitmap))))
+        map.addCircle(circleOptions)
+    }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // Verificar el estado del permiso de ubicación
