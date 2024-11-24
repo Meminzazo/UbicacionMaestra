@@ -673,7 +673,12 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         geofences.forEach { geofence ->
             Log.d(TAG, "Guardando geovalla: ${geofence.name}, Latitud: ${geofence.latitude}, Longitud: ${geofence.longitude}, Radio: ${geofence.radius}, Transiciones: ${geofence.transitionTypes}")
             // Lógica para guardar en base de datos
-            writeNewUser(geofence.name, geofence.latitude.toString(), geofence.longitude.toString(), geofence.radius.toString())
+            if (geofence.name != null || geofence.name != "") {
+                writeNewUser(geofence.name, geofence.latitude.toString(), geofence.longitude.toString(), geofence.radius.toString())
+            }else{
+                Toast.makeText(this, "Error al guardar geovalla, intente de nuevo y verifique los datos", Toast.LENGTH_SHORT).show()
+                Log.e(TAG, "Sin nombre error al guardar geovalla")
+            }
         }
     }
     fun writeNewUser(name: String, latitud: String, longitud: String, radius: String) {

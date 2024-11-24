@@ -29,59 +29,87 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import android.graphics.Path
+import android.view.View
+import android.widget.ProgressBar
 
 
 class DetallesDelitosActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var mMap: GoogleMap
     private var delitosCercanos: ArrayList<SaveUbicacionReal.Delito>? = null
+    private lateinit var fondoCarga: View
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_detalles_delitos)
         supportActionBar?.hide()
+
+        // Referencia al ProgressBar
+        val progressBar = findViewById<ProgressBar>(R.id.progressBarDelitos)
+        fondoCarga = findViewById(R.id.fondo)
+
         // Obtener los datos del Intent
         delitosCercanos = intent.getSerializableExtra("delitosCercanos") as? ArrayList<SaveUbicacionReal.Delito>
 
         // Inicializar el mapa
         val mapFragment = supportFragmentManager.findFragmentById(R.id.mapdelitos) as SupportMapFragment
-        mapFragment.getMapAsync(this)
+        mapFragment.getMapAsync { googleMap ->
+            mMap = googleMap
+            mMap.uiSettings.isZoomControlsEnabled = true
+
+            // Cargar los marcadores de manera asíncrona
+            lifecycleScope.launch {
+                fondoCarga.visibility = View.VISIBLE
+                loadMarkersAsync(delitosCercanos ?: emptyList(), progressBar)
+            }
+        }
     }
 
-    override fun onMapReady(googleMap: GoogleMap) {
-        mMap = googleMap
-        mMap.uiSettings.isZoomControlsEnabled = true
-
-        // Mostrar los markers de los delitos cercanos en el mapa
-        delitosCercanos?.let { listaDelitos ->
-            if (listaDelitos.isNotEmpty()) {
-                for (delito in listaDelitos) {
+    private suspend fun loadMarkersAsync(
+        delitos: List<SaveUbicacionReal.Delito>,
+        progressBar: ProgressBar
+    ) {
+        withContext(Dispatchers.IO) {
+            if (delitos.isNotEmpty()) {
+                for (delito in delitos) {
                     val ubicacionDelito = LatLng(delito.latitud, delito.longitud)
 
                     // Obtener el ícono adecuado para este tipo de delito
                     val iconResId = getMarkerIconForDelito(delito.categoriaDelito)
 
-                    // Redimensionar el ícono a un tamaño adecuado
-                    val resizedIcon = resizeBitmap(iconResId, 100, 100) // Ajustar el tamaño según sea necesario
+                    // Redimensionar el ícono
+                    val resizedIcon = resizeBitmap(iconResId, 100, 100)
 
-                    // Crear un marcador personalizado con el ícono redimensionado
+                    // Crear marcador personalizado
                     val customMarkerBitmap = createCustomMarker(resizedIcon)
 
-                    // Agregar el marcador con el ícono personalizado
-                    mMap.addMarker(
-                        MarkerOptions()
-                            .position(ubicacionDelito)
-                            .title(delito.delito)
-                            .icon(BitmapDescriptorFactory.fromBitmap(customMarkerBitmap))
-                    )
+                    // Agregar el marcador al mapa en el hilo principal
+                    withContext(Dispatchers.Main) {
+                        mMap.addMarker(
+                            MarkerOptions()
+                                .position(ubicacionDelito)
+                                .title(delito.delito)
+                                .icon(BitmapDescriptorFactory.fromBitmap(customMarkerBitmap))
+                        )
+                    }
                 }
 
                 // Mover la cámara al primer marcador
-                val firstDelito = listaDelitos[0]
-                val firstLocation = LatLng(firstDelito.latitud, firstDelito.longitud)
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(firstLocation, 12f))
+                withContext(Dispatchers.Main) {
+                    val firstDelito = delitos[0]
+                    val firstLocation = LatLng(firstDelito.latitud, firstDelito.longitud)
+                    mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(firstLocation, 12f))
+                }
+            }
+
+            // Ocultar el ProgressBar y mostrar el mapa
+            withContext(Dispatchers.Main) {
+                progressBar.visibility = View.GONE
+                fondoCarga.visibility = View.GONE
+                findViewById<View>(R.id.mapdelitos).visibility = View.VISIBLE
             }
         }
     }
+
 
     // Función para redimensionar un Bitmap
     private fun resizeBitmap(resourceId: Int, width: Int, height: Int): Bitmap {
@@ -149,6 +177,9 @@ class DetallesDelitosActivity : AppCompatActivity(), OnMapReadyCallback {
             "VIOLACIÓN" -> R.drawable.ic_violacion
             else -> R.drawable.ic_default // Un ícono por defecto si no coincide ningún tipo
         }
+    }
+
+    override fun onMapReady(p0: GoogleMap) {
     }
 
 }

@@ -10,8 +10,10 @@ import android.os.Bundle
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.Button
 import android.widget.ImageView
 import android.widget.Spinner
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.view.ViewCompat
@@ -22,6 +24,12 @@ import com.esime.ubicacionmaestra.Firstapp.ui.utilities.services.EarthquakeMonit
 import com.esime.ubicacionmaestra.R
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.material.switchmaterial.SwitchMaterial
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 
 class preferenceUserActivity : AppCompatActivity() {
 
@@ -33,6 +41,13 @@ class preferenceUserActivity : AppCompatActivity() {
     private lateinit var batteryDarkModeReceiver: BatteryDarkModeReceiver
     private lateinit var sharedPreferences1: SharedPreferences
     lateinit var sismosSwitch: SwitchMaterial
+    private lateinit var spinnerGeovallas: Spinner
+    private lateinit var btnEliminarGeovalla: Button
+    private lateinit var database: FirebaseDatabase
+    private lateinit var geovallasRef: DatabaseReference
+    private lateinit var geovallasList: MutableList<String>
+    private lateinit var geovallasKeys: MutableList<String> // Almacenar las claves únicas de las geovallas
+    private lateinit var auth: FirebaseAuth
 
     @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -160,7 +175,30 @@ class preferenceUserActivity : AppCompatActivity() {
 
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
+        // Inicializa la base de datos
+        database = FirebaseDatabase.getInstance()
+        auth = FirebaseAuth.getInstance()
+        spinnerGeovallas = findViewById(R.id.spinnerGeovallas)
+        btnEliminarGeovalla = findViewById(R.id.btnEliminarGeovalla)
+        val userId = auth.currentUser?.uid // Aquí usa dinámicamente el ID del usuario
+        geovallasRef = database.getReference("users").child(userId!!).child("Geovallas")
 
+        // Inicializa listas
+        geovallasList = mutableListOf()
+        geovallasKeys = mutableListOf()
+
+        // Cargar geovallas al Spinner
+        cargarGeovallas()
+        // Configurar acción del botón
+        btnEliminarGeovalla.setOnClickListener {
+            val selectedIndex = spinnerGeovallas.selectedItemPosition
+            if (selectedIndex >= 0) {
+                val geovallaKey = geovallasKeys[selectedIndex]
+                eliminarGeovalla(geovallaKey)
+            } else {
+                Toast.makeText(this, "No se seleccionó ninguna geovalla", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
     // Método para guardar el tiempo seleccionado
     private fun saveGuardadoTiempo(guardadoTiempo: Int) {
@@ -202,5 +240,46 @@ class preferenceUserActivity : AppCompatActivity() {
         val editor = sharedPreferences1.edit()
         editor.putBoolean("user_set_dark_mode", isUserSet)
         editor.apply()
+    }
+    private fun cargarGeovallas() {
+        geovallasRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                geovallasList.clear()
+                geovallasKeys.clear()
+
+                for (geovallaSnapshot in snapshot.children) {
+                    val key = geovallaSnapshot.key // Clave de la geovalla
+                    val name = geovallaSnapshot.child("name").getValue(String::class.java) // Nombre de la geovalla
+                    if (key != null && name != null) {
+                        geovallasKeys.add(key)
+                        geovallasList.add(name)
+                    }
+                }
+
+                // Configurar el Spinner
+                val adapter = ArrayAdapter(
+                    this@preferenceUserActivity,
+                    android.R.layout.simple_spinner_item,
+                    geovallasList
+                )
+                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                spinnerGeovallas.adapter = adapter
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Toast.makeText(this@preferenceUserActivity, "Error al cargar geovallas", Toast.LENGTH_SHORT).show()
+            }
+        })
+    }
+
+    private fun eliminarGeovalla(geovallaKey: String) {
+        geovallasRef.child(geovallaKey).removeValue()
+            .addOnSuccessListener {
+                Toast.makeText(this, "Geovalla eliminada con éxito", Toast.LENGTH_SHORT).show()
+                cargarGeovallas() // Recargar las geovallas en el Spinner
+            }
+            .addOnFailureListener { exception ->
+                Toast.makeText(this, "Error al eliminar la geovalla: ${exception.message}", Toast.LENGTH_SHORT).show()
+            }
     }
 }
