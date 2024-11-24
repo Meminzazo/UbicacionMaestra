@@ -158,11 +158,11 @@ class SaveUbicacionReal : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnM
         val sharedPrefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val btnAjustes = findViewById<Button>(R.id.btnAjustes)
         switchUbicacionReal.isChecked = sharedPrefs.getBoolean(SWITCH_STATE, false)
+        overlayView = findViewById<View>(R.id.overlayView)
 
         btnIndice.setOnClickListener {
             // Obtener referencia al ProgressBar
             val progressBarCargando = findViewById<ProgressBar>(R.id.progressBarCargando)
-            overlayView = findViewById<View>(R.id.overlayView)
             overlayView.visibility = View.VISIBLE
             // Mostrar el ProgressBar mientras se cargan los datos
             progressBarCargando.visibility = View.VISIBLE
