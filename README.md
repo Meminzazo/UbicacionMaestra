@@ -58,3 +58,12 @@
 - Cuenta en **Firebase** con servicios configurados.
 - **Google Maps API Key** activa.
 - **OpenWeather API Key** activa.
+
+### ESTOS VALORES TIENE QUE SER MODIFICADOS PARA SU CORRECTO FUNCIONAMIENTO:
+<resources>
+    <string name="google_maps_api_key">TU_GOOGLE_MAPS_API_KEY</string>
+    <string name="telegram_bot_token">TU_TELEGRAM_BOT_TOKEN</string>
+</resources>
+
+### Y DESCARGAR LAS CREDENCIALES:
+google-services.json
